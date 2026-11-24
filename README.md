@@ -8,12 +8,25 @@ A Claude Code skill (packaged as a plugin) that runs your real buyer questions t
 
 ## Install
 
-In Claude Code:
+**One line, in your terminal** (macOS, Linux, WSL):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Manasbh/promptwatch-buster/main/install.sh | bash
+```
+
+It installs the plugin through the `claude` CLI, or copies the skill into `~/.claude/skills` if the CLI isn't on your PATH. Read [install.sh](install.sh) first if you like; it's 30 lines.
+
+**Or inside Claude Code**, run these as **two separate commands**, one at a time:
 
 ```
 /plugin marketplace add Manasbh/promptwatch-buster
+```
+
+```
 /plugin install promptwatch-buster@promptwatch-buster
 ```
+
+**Or just ask Claude Code:** "install the plugin from github.com/Manasbh/promptwatch-buster".
 
 Then get a Renderdata API key. Sign up at [platform.renderdata.cloud](https://platform.renderdata.cloud/login); new accounts get free credits. Set the key in your shell:
 
@@ -27,7 +40,9 @@ Start Claude Code and ask something like:
 
 Or type `/promptwatch-buster`.
 
-**Without the plugin system:** clone this repo and copy `skills/promptwatch-buster` into `~/.claude/skills/`.
+**Manual:** clone this repo and copy `skills/promptwatch-buster` into `~/.claude/skills/`.
+
+**Update:** `claude plugin update promptwatch-buster@promptwatch-buster` (or re-run the one-liner).
 
 ## What it does
 
