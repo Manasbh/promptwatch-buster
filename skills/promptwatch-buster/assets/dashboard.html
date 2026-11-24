@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Visibility Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Tokens. The accent is "you": the brand's series color doubles as the UI accent, so wherever the
+   eye lands on blue, it is looking at the tracked brand. Engines and rivals keep fixed series slots. */
+:root {
+  color-scheme: dark;
+  --canvas: #0b0c0e; --panel: #111316; --lift: #171a1e; --well: #08090b;
+  --ink: #eeeef0; --ink-2: #b4b5ba; --ink-3: #85868c; --ink-4: #5a5b61;
+  --line: rgba(255,255,255,.07); --line-soft: rgba(255,255,255,.045); --line-strong: rgba(255,255,255,.13);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+  --other: #4a4a46; --you: var(--s1); --you-soft: rgba(57,135,229,.12); --you-line: rgba(57,135,229,.35);
+  --good: #0ca30c; --warning: #c98500; --critical: #e66767; --up: #2fbf71; --down: #e66767;
+  --shadow: none; --glow: 0 0 0 1px var(--line), 0 1px 0 rgba(255,255,255,.03) inset;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f5f5f3; --panel: #ffffff; --lift: #fafaf9; --well: #efefec;
+  --ink: #0d0e10; --ink-2: #45464b; --ink-3: #75767c; --ink-4: #a4a5aa;
+  --line: rgba(13,14,16,.09); --line-soft: rgba(13,14,16,.055); --line-strong: rgba(13,14,16,.16);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --other: #c3c2b7; --you-soft: rgba(42,120,214,.08); --you-line: rgba(42,120,214,.3);
+  --good: #0a8a0a; --warning: #b57a00; --critical: #d03b3b; --up: #067a3a; --down: #d03b3b;
+  --shadow: 0 1px 2px rgba(13,14,16,.04), 0 2px 8px rgba(13,14,16,.03); --glow: 0 0 0 1px var(--line);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--canvas); color: var(--ink); }
+body { font: 13.5px/1.5 Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+.mono, .num { font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+a { color: var(--you); text-decoration: none; } a:hover { text-decoration: underline; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--you); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- shell ---------- */
+.shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+.rail { position: sticky; top: 0; height: 100vh; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 16px 12px; gap: 18px; }
+.logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px; font-weight: 650; letter-spacing: -.01em; }
+.logo .m { width: 22px; height: 22px; border-radius: 6px; background: var(--you); display: grid; place-items: center; }
+.logo .m svg { width: 14px; height: 14px; }
+.logo small { display: block; font-weight: 500; color: var(--ink-3); font-size: 11px; letter-spacing: 0; }
+.proj { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 10px; display: flex; gap: 10px; align-items: center; }
+.proj .av { width: 30px; height: 30px; border-radius: 8px; background: var(--you-soft); color: var(--you); display: grid; place-items: center; font-weight: 700; flex: none; border: 1px solid var(--you-line); }
+.proj b { display: block; font-weight: 600; } .proj span { color: var(--ink-3); font-size: 12px; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav .h { font-size: 11px; color: var(--ink-4); font-weight: 500; padding: 8px 10px 4px; text-transform: uppercase; letter-spacing: .08em; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--ink-2); font-weight: 500; }
+.nav a svg { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; opacity: .8; }
+.nav a:hover { background: var(--line-soft); color: var(--ink); text-decoration: none; }
+.nav a[aria-current="page"] { background: var(--lift); color: var(--ink); box-shadow: var(--glow); }
+.nav a[aria-current="page"] svg { color: var(--you); opacity: 1; }
+.nav .cnt { margin-left: auto; font-size: 11px; color: var(--ink-3); background: var(--line-soft); border-radius: 999px; padding: 0 7px; }
+.rail .foot { margin-top: auto; font-size: 11.5px; color: var(--ink-3); padding: 0 8px; display: grid; gap: 4px; }
+.rail .foot .live { display: flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.rail .foot .live i { width: 6px; height: 6px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 20%, transparent); }
+
+main { min-width: 0; }
+.top { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 28px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--canvas) 85%, transparent); backdrop-filter: blur(10px); }
+.crumb { display: flex; align-items: center; gap: 8px; color: var(--ink-3); min-width: 0; white-space: nowrap; }
+.crumb b { color: var(--ink); font-weight: 600; }
+.tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pillx { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 9px; font-size: 12px; color: var(--ink-2); background: var(--panel); white-space: nowrap; }
+.pillx i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--lift); border-radius: 8px; padding: 5px 11px; cursor: pointer; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.btn:hover { border-color: var(--ink-4); }
+.btn.pri { background: var(--you); border-color: transparent; color: #fff; }
+.btn.pri:hover { filter: brightness(1.08); }
+.btn.icon { padding: 5px 8px; }
+.view { padding: 24px 28px 48px; max-width: 1400px; }
+.view[hidden] { display: none; }
+.vh { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.vh h1 { font-size: 22px; letter-spacing: -.02em; margin: 0; font-weight: 650; }
+.vh p { margin: 4px 0 0; color: var(--ink-3); max-width: 720px; }
+
+/* ---------- grid + cards ---------- */
+.g { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px; }
+.c12 { grid-column: span 12; } .c8 { grid-column: span 8; } .c7 { grid-column: span 7; } .c6 { grid-column: span 6; }
+.c5 { grid-column: span 5; } .c4 { grid-column: span 4; } .c3 { grid-column: span 3; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); min-width: 0; }
+.card.flush { padding: 0; } .card.flush .ch { padding: 16px 18px 0; }
+.ch { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+.ch h3 { font-size: 13.5px; margin: 0; font-weight: 600; letter-spacing: -.005em; }
+.ch p { margin: 2px 0 0; color: var(--ink-3); font-size: 12px; }
+.lbl { font-size: 12px; color: var(--ink-3); font-weight: 500; display: flex; align-items: center; gap: 7px; }
+.sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 24px; position: relative; overflow: hidden; }
+.hero::before { content: ""; position: absolute; inset: -40% 40% auto -10%; height: 140%; background: radial-gradient(closest-side, var(--you-soft), transparent); pointer-events: none; }
+.hero > * { position: relative; }
+.big { font-size: 64px; font-weight: 650; letter-spacing: -.045em; line-height: 1; margin: 14px 0 6px; }
+.big sup { font-size: 26px; letter-spacing: -.02em; color: var(--ink-3); vertical-align: 28px; margin-left: 2px; font-weight: 500; }
+.hero .sub { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--ink-3); font-size: 12px; }
+.rank { display: inline-flex; align-items: center; gap: 6px; background: var(--you-soft); color: var(--ink); border: 1px solid var(--you-line); border-radius: 999px; padding: 2px 9px; font-size: 12px; font-weight: 600; }
+.delta { white-space: nowrap; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; }
+.delta.up { color: var(--up); } .delta.down { color: var(--down); } .delta.flat { color: var(--ink-3); }
+.ebreak { display: grid; gap: 12px; align-content: center; }
+.erow { display: grid; grid-template-columns: 130px minmax(0, 1fr) 54px; align-items: center; gap: 12px; font-size: 12.5px; }
+.erow .n { display: flex; align-items: center; gap: 7px; color: var(--ink-2); white-space: nowrap; overflow: hidden; }
+.erow .v { text-align: right; font-weight: 500; }
+.ci { position: relative; height: 8px; border-radius: 4px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line-soft); }
+.ci .band { position: absolute; top: 0; bottom: 0; border-radius: 4px; opacity: .28; }
+.ci .pt { position: absolute; top: -3px; width: 4px; height: 14px; margin-left: -2px; border-radius: 2px; box-shadow: 0 0 0 2px var(--panel); }
+
+/* kpi */
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpi .v { font-size: 28px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; margin-top: 6px; }
+.kpi .row { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-top: auto; flex-wrap: wrap; }
+.kpi .note { font-size: 11.5px; color: var(--ink-3); }
+.spark { width: 96px; height: 30px; flex: none; overflow: visible; }
+
+/* engine cards + run tape (signature: every individual run, lit when it named you) */
+.eng .top2 { display: flex; justify-content: space-between; align-items: center; }
+.eng .v { font-size: 34px; font-weight: 600; letter-spacing: -.035em; margin: 8px 0 2px; line-height: 1.05; }
+.eng .rng { font-size: 11.5px; color: var(--ink-3); }
+.tape { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 12px; }
+.tape .p { display: flex; gap: 2px; }
+.tape .t { width: 4px; height: 16px; border-radius: 1.5px; background: var(--line-strong); }
+.mini3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.mini3 b { display: block; font-size: 15px; font-weight: 600; }
+.mini3 span { font-size: 11.5px; color: var(--ink-3); }
+
+/* tables */
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th { text-align: left; color: var(--ink-3); font-weight: 500; font-size: 11.5px; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--lift); }
+th:first-child { border-top-left-radius: 0; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; overflow-wrap: anywhere; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--line-soft); }
+td.r, th.r { text-align: right; }
+tr.me td { background: var(--you-soft); } tr.me:hover td { background: var(--you-soft); }
+tr.me td:first-child { box-shadow: inset 2px 0 0 var(--you); }
+.card.flush .tw { margin-top: 14px; border-top: 1px solid var(--line); }
+.card.flush table th:first-child, .card.flush table td:first-child { padding-left: 18px; }
+.card.flush table th:last-child, .card.flush table td:last-child { padding-right: 18px; }
+.meter { display: inline-flex; align-items: center; gap: 8px; min-width: 120px; }
+.meter .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line-soft); position: relative; overflow: hidden; min-width: 48px; }
+.meter .bar b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--ink-4); }
+.meter .num { width: 36px; text-align: right; color: var(--ink-2); }
+.bname { display: flex; align-items: center; gap: 8px; font-weight: 500; white-space: nowrap; }
+.you-tag { font-size: 10.5px; font-weight: 600; color: var(--you); border: 1px solid var(--you-line); border-radius: 4px; padding: 0 5px; }
+.rk { color: var(--ink-4); width: 28px; }
+.dots3 { display: inline-flex; gap: 10px; }
+.dots3 span { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); }
+.code { font-family: "Geist Mono", ui-monospace, monospace; font-size: 11px; color: var(--ink-4); }
+.tag { display: inline-flex; font-size: 11px; color: var(--ink-2); border: 1px solid var(--line); background: var(--lift); border-radius: 5px; padding: 0 6px; white-space: nowrap; }
+.st { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; color: var(--ink-2); }
+.st i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-4); }
+.st.good i { background: var(--good); } .st.warn i { background: var(--warning); } .st.crit i { background: var(--critical); }
+
+/* segmented + inputs */
+.seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); background: var(--well); border-radius: 9px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 4px 10px; border-radius: 7px; cursor: pointer; color: var(--ink-3); font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--lift); color: var(--ink); box-shadow: var(--glow); }
+.search { border: 1px solid var(--line); background: var(--well); border-radius: 9px; padding: 6px 10px; color: var(--ink); font: inherit; font-size: 12.5px; min-width: 220px; }
+.search::placeholder { color: var(--ink-4); }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* leaderboard extras + lists */
+.blist { list-style: none; margin: 0; padding: 0; }
+.blist li { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; }
+.blist li:last-child { border-bottom: 0; }
+.blist .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+.fav { width: 16px; height: 16px; border-radius: 4px; background: var(--lift); border: 1px solid var(--line); display: inline-grid; place-items: center; font-size: 9px; font-weight: 700; color: var(--ink-3); flex: none; text-transform: uppercase; }
+
+/* actions */
+.prog { display: flex; align-items: center; gap: 12px; min-width: 260px; }
+.prog .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; display: flex; gap: 2px; }
+.prog .bar b { display: block; height: 100%; }
+.board { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.col { background: var(--well); border: 1px solid var(--line-soft); border-radius: 12px; padding: 10px; display: grid; gap: 10px; min-width: 0; }
+.col .hd { display: flex; align-items: center; gap: 8px; padding: 4px 6px 2px; font-weight: 600; font-size: 12.5px; }
+.col .hd i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-4); }
+.col.doing .hd i { background: var(--warning); } .col.done .hd i { background: var(--good); }
+.col .hd span { color: var(--ink-3); font-weight: 500; }
+.act { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; display: grid; gap: 6px; box-shadow: var(--shadow); transition: border-color .15s ease; }
+.act:hover { border-color: var(--line-strong); }
+.act .t { font-weight: 600; font-size: 13.5px; line-height: 1.35; overflow-wrap: anywhere; }
+.act .d { color: var(--ink-2); font-size: 12.5px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+.act .d.open { -webkit-line-clamp: unset; }
+.act .m { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.act .f { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 2px; }
+.act .btn { padding: 3px 10px; font-size: 12px; }
+.act.done .t { text-decoration: line-through; color: var(--ink-3); } .act.done .d { color: var(--ink-3); }
+.sig { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; margin-right: 2px; }
+.sig b { width: 3px; border-radius: 1px; background: var(--line-strong); }
+.sig b:nth-child(1) { height: 5px; } .sig b:nth-child(2) { height: 8px; } .sig b:nth-child(3) { height: 11px; }
+.sig b.on { background: var(--ink-2); }
+.src { font-size: 11px; color: var(--ink-4); }
+.moves { display: grid; gap: 2px; }
+.move { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 10px 6px; border-radius: 8px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+.move:last-child { border-bottom: 0; } .move:hover { background: var(--line-soft); }
+.move .i { width: 22px; height: 22px; border-radius: 6px; background: var(--lift); border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.move .t { font-weight: 550; font-size: 12.5px; line-height: 1.35; }
+.move .m { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 11px; color: var(--ink-3); }
+
+/* sov + dot-whisker */
+.sovr { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; align-items: center; margin: 10px 0; font-size: 12.5px; }
+.sovr .stack { display: flex; gap: 2px; height: 24px; }
+.sovr .stack div { min-width: 2px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; color: #fff; overflow: hidden; font-family: "Geist Mono", monospace; }
+.sovr .stack div:first-child { border-radius: 5px 0 0 5px; } .sovr .stack div:last-child { border-radius: 0 5px 5px 0; }
+.sovr .stack div.dk { color: #0b0b0b; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dw { display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px; align-items: center; gap: 12px; padding: 8px 6px; border-radius: 8px; font-size: 12.5px; }
+.dw:hover { background: var(--line-soft); }
+.dw .track { position: relative; height: 18px; background: linear-gradient(to right, var(--line) 1px, transparent 1px) 0 0 / 25% 100%; border-right: 1px solid var(--line); }
+.dw .wh { position: absolute; top: 8px; height: 2px; background: var(--ink-4); border-radius: 1px; }
+.dw .dt { position: absolute; top: 4px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; box-shadow: 0 0 0 2px var(--panel); }
+.dw .v { text-align: right; color: var(--ink-2); }
+.dw .v small { color: var(--ink-4); }
+.axis { display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px; gap: 12px; padding: 0 6px; font-size: 10.5px; color: var(--ink-4); }
+.axis div { display: flex; justify-content: space-between; }
+
+/* quotes, misc */
+.quote { border: 1px solid var(--line); background: var(--lift); border-radius: 10px; padding: 12px 14px; margin: 0 0 10px; overflow-wrap: anywhere; font-size: 12.5px; color: var(--ink-2); }
+.quote .s { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-3); margin-top: 8px; }
+.empty { color: var(--ink-3); padding: 26px 12px; text-align: center; font-size: 12.5px; border: 1px dashed var(--line); border-radius: 10px; }
+details { margin-top: 12px; } summary { cursor: pointer; color: var(--ink-3); font-size: 12px; }
+svg text { fill: var(--ink-3); font-size: 11px; font-family: "Geist Mono", ui-monospace, monospace; }
+.tip { position: fixed; pointer-events: none; z-index: 30; background: var(--lift); color: var(--ink); border: 1px solid var(--line-strong);
+  border-radius: 9px; padding: 9px 11px; font-size: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.28); max-width: 300px; display: none; }
+.tip b { font-weight: 600; } .tip .r { display: flex; justify-content: space-between; gap: 16px; color: var(--ink-2); } .tip .r b { color: var(--ink); }
+.note { font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 1180px) {
+  .c8, .c7, .c6, .c5, .c4 { grid-column: span 12; } .c3 { grid-column: span 6; }
+  .hero { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .rail { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 16px; gap: 10px; }
+  .rail .proj, .rail .foot, .nav .h { display: none; }
+  .nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  .nav a { white-space: nowrap; }
+  .top { padding: 10px 16px; position: static; }
+  .top .crumb { display: none; }
+  .tools { justify-content: flex-start; }
+  .view { padding: 18px 16px 40px; }
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .c3 { grid-column: span 12; }
+  .big { font-size: 52px; }
+  .erow { grid-template-columns: 96px minmax(0, 1fr) 44px; }
+  .dw, .axis { grid-template-columns: 96px minmax(0, 1fr) 54px; } .dw .v small { display: none; }
+  .sovr { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .search { min-width: 0; width: 100%; }
+  .blist li { grid-template-columns: minmax(0, 1fr) 110px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view:not([hidden]) { animation: rise .22s cubic-bezier(.2,.7,.2,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+</style>
+</head>
+<body>
+<script>const DATA = /*__DATA__*/null;</script>
+<div id="app"></div>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+(function () {
+  "use strict";
+  const app = document.getElementById("app");
+  if (!DATA) { app.textContent = "No data. Run: pwb.py dashboard <config>"; return; }
+  const L = DATA.latest, H = DATA.history, B = DATA.brand, E = L.engines;
+  const prev = H.length > 1 ? H[H.length - 2] : null;
+  const ENG = { chatgpt: "ChatGPT", gemini: "Gemini", google: "Google AI Overviews" };
+  const ESHORT = { chatgpt: "ChatGPT", gemini: "Gemini", google: "AI Overviews" };
+  const ESLOT = { chatgpt: 1, gemini: 2, google: 3 };          // color follows the engine, fixed
+  const brandsOrder = [B].concat(L.competitors);                 // color follows the brand, fixed
+  const BSLOT = {}; brandsOrder.forEach((n, i) => { BSLOT[n] = i < 8 ? i + 1 : 0; });
+  const DARK_INK = { 4: true };
+  const pct = x => (x == null || isNaN(x)) ? "–" : Math.round(x * 100) + "%";
+  const rng = c => c ? `${pct(c.lo)}–${pct(c.hi)}` : "";
+  const sv = s => s ? `var(--s${s})` : "var(--other)";
+  const mean = a => { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : null;
+  const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return u; } };
+
+  // ---- safe DOM builders: scraped text only ever goes in via textContent ----
+  function el(tag, a, ...kids) {
+    const n = document.createElement(tag);
+    for (const k in (a || {})) {
+      const v = a[k]; if (v == null || v === false) continue;
+      if (k === "text") n.textContent = v; else if (k === "cls") n.className = v;
+      else if (k === "style") n.style.cssText = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    return n;
+  }
+  function sg(tag, a, txt) { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in a) n.setAttribute(k, a[k]); if (txt != null) n.textContent = txt; return n; }
+  const ICON = {
+    overview: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z",
+    actions: "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
+    competitors: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+    prompts: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+    opportunities: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+    sources: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
+    content: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5",
+    theme: "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z", download: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3",
+  };
+  const icon = (k, sz = 16) => { const s = sg("svg", { viewBox: "0 0 24 24", width: sz, height: sz, "aria-hidden": "true", style: "stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round" }); s.append(sg("path", { d: ICON[k] })); return s; };
+
+  const tip = document.getElementById("tip");
+  function showTip(e, rows) {
+    tip.replaceChildren(...rows); tip.style.display = "block";
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  }
+  const hideTip = () => { tip.style.display = "none"; };
+  const hover = (node, rows) => { node.addEventListener("mousemove", ev => showTip(ev, rows())); node.addEventListener("mouseleave", hideTip); return node; };
+  const tr = (k, v) => el("div", { cls: "r" }, el("span", { text: k }), el("b", { cls: "num", text: v }));
+  const card = (cls, title, hint, right, ...kids) => el("div", { cls: "card " + (cls || "") },
+    (title || right) && el("div", { cls: "ch" }, el("div", null, title && el("h3", { text: title }), hint && el("p", { text: hint })), right), ...kids);
+  const table = (heads, rows, right = [], rowCls) => el("div", { cls: "tw" }, el("table", null,
+    el("thead", null, el("tr", null, heads.map((h, i) => el("th", { cls: right.includes(i) ? "r" : null, text: h })))),
+    el("tbody", null, rows.map((r, ri) => el("tr", { cls: rowCls ? rowCls(ri) : null }, r.map((c, i) => el("td", { cls: right.includes(i) ? "r num" : null }, c)))))));
+  const empty = t => el("div", { cls: "empty", text: t });
+  const st = (kind, text) => el("span", { cls: "st " + kind }, el("i"), text);
+  const meter = (v, color) => el("span", { cls: "meter" }, el("span", { cls: "bar" }, el("b", { style: `width:${Math.max(0, Math.min(1, v || 0)) * 100}%;${color ? "background:" + color : ""}` })), el("span", { cls: "num", text: pct(v) }));
+  const fav = h => el("span", { cls: "fav", text: (h || "?").replace(/^www\./, "")[0] });
+  function deltaEl(now, before, label) {
+    if (now == null || before == null) return null;
+    // ponytail: moves under 10 pts stay grey; with small panels they are almost always inside the 95% range
+    const d = Math.round((now - before) * 100), c = Math.abs(d) < 10 ? "flat" : d > 0 ? "up" : "down";
+    return el("span", { cls: "delta " + c, title: (label ? `vs ${label}` : "change") + (Math.abs(d) < 10 ? " · likely noise" : ""), text: `${d > 0 ? "↑ +" : d < 0 ? "↓ " : "→ "}${Math.abs(d) < 1 ? 0 : d} pts` });
+  }
+  function spark(vals, color, W = 96, Hh = 30) {
+    const pts = vals.map((v, i) => [i, v]).filter(p => p[1] != null);
+    if (pts.length < 2) return el("span", { cls: "note", text: "1 wave" });
+    const lo = Math.min(...pts.map(p => p[1])), hi = Math.max(...pts.map(p => p[1])), span = Math.max(.05, hi - lo);
+    const x = i => 2 + i * (W - 4) / Math.max(1, vals.length - 1), y = v => Hh - 3 - (v - lo) / span * (Hh - 6);
+    const s = sg("svg", { class: "spark", viewBox: `0 0 ${W} ${Hh}`, style: `width:${W}px;height:${Hh}px;max-width:100%`, role: "img", "aria-label": "trend: " + pts.map(p => pct(p[1])).join(", ") });
+    const line = pts.map(p => `${x(p[0])},${y(p[1])}`).join(" ");
+    s.append(sg("polygon", { points: `${x(pts[0][0])},${Hh} ${line} ${x(pts[pts.length - 1][0])},${Hh}`, style: `fill:${color};opacity:.12` }));
+    s.append(sg("polyline", { points: line, style: `fill:none;stroke:${color};stroke-width:2;stroke-linejoin:round;stroke-linecap:round` }));
+    const l = pts[pts.length - 1]; s.append(sg("circle", { cx: x(l[0]), cy: y(l[1]), r: 3, style: `fill:${color};stroke:var(--panel);stroke-width:2` }));
+    return s;
+  }
+  // generic multi-series line chart: one y axis (0–100%), optional 95% bands, crosshair tooltip, table view
+  function lineChart(series, labels, ariaLabel) {
+    const W = 860, Hh = 260, m = { l: 40, r: 160, t: 14, b: 30 }, iw = W - m.l - m.r, ih = Hh - m.t - m.b;
+    const xs = i => m.l + (labels.length === 1 ? iw / 2 : i * iw / (labels.length - 1)), ys = v => m.t + ih - v * ih;
+    const svg = sg("svg", { viewBox: `0 0 ${W} ${Hh}`, width: "100%", role: "img", "aria-label": ariaLabel });
+    [0, .25, .5, .75, 1].forEach(v => {
+      svg.append(sg("line", { x1: m.l, x2: m.l + iw, y1: ys(v), y2: ys(v), style: `stroke:var(${v ? "--line" : "--line-strong"});stroke-width:1` }));
+      svg.append(sg("text", { x: m.l - 8, y: ys(v) + 4, "text-anchor": "end" }, v * 100 + "%"));
+    });
+    labels.forEach((w, i) => svg.append(sg("text", { x: xs(i), y: Hh - 8, "text-anchor": "middle" }, w)));
+    const ends = [], bands = [];
+    series.slice().sort((a, b) => !!a.bold - !!b.bold).forEach(s => {  // the bold series ("you") draws last, on top
+      const pts = s.points.map((p, i) => p && p.v != null ? [i, p] : null).filter(Boolean); if (!pts.length) return;
+      if (pts[0][1].lo != null) bands.push(svg.appendChild(sg("polygon", { points: pts.map(([i, p]) => `${xs(i)},${ys(p.hi)}`).concat(pts.slice().reverse().map(([i, p]) => `${xs(i)},${ys(p.lo)}`)).join(" "), style: `fill:${s.color};opacity:.1;display:none` })));
+      svg.append(sg("polyline", { points: pts.map(([i, p]) => `${xs(i)},${ys(p.v)}`).join(" "), style: `fill:none;stroke:${s.color};stroke-width:${s.bold ? 2.5 : 2};stroke-linejoin:round;stroke-linecap:round` }));
+      pts.forEach(([i, p]) => svg.append(sg("circle", { cx: xs(i), cy: ys(p.v), r: 4, style: `fill:${s.color};stroke:var(--panel);stroke-width:2` })));
+      const [li, lp] = pts[pts.length - 1]; ends.push({ name: s.name, x: xs(li), y: ys(lp.v), v: lp.v });
+    });
+    ends.sort((a, b) => a.y - b.y); for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 14);
+    ends.forEach(o => svg.append(sg("text", { x: o.x + 10, y: o.y + 4, style: "fill:var(--ink-2);font-size:11.5px" }, `${o.name} ${pct(o.v)}`)));
+    const cross = sg("line", { y1: m.t, y2: m.t + ih, style: "stroke:var(--line-strong);stroke-width:1;display:none" }); svg.append(cross);
+    const hit = sg("rect", { x: m.l - 20, y: 0, width: iw + 40, height: Hh, style: "fill:transparent" }); svg.append(hit);
+    hit.addEventListener("mousemove", ev => {
+      const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * W / r.width;
+      const i = Math.max(0, Math.min(labels.length - 1, Math.round((x - m.l) / (iw / Math.max(1, labels.length - 1)))));
+      cross.setAttribute("x1", xs(i)); cross.setAttribute("x2", xs(i)); cross.style.display = "";
+      showTip(ev, [el("b", { text: labels[i] })].concat(series.map(s => { const p = s.points[i]; return tr(s.name, p && p.v != null ? pct(p.v) + (p.lo != null ? ` (${pct(p.lo)}–${pct(p.hi)})` : "") : "–"); })));
+    });
+    hit.addEventListener("mouseleave", () => { cross.style.display = "none"; hideTip(); });
+    const bandBtn = bands.length ? el("button", { cls: "btn", "aria-pressed": "false", onclick: ev => { const on = ev.currentTarget.getAttribute("aria-pressed") !== "true";
+      ev.currentTarget.setAttribute("aria-pressed", String(on)); ev.currentTarget.textContent = on ? "Hide 95% ranges" : "Show 95% ranges"; bands.forEach(b => { b.style.display = on ? "" : "none"; }); }, text: "Show 95% ranges" }) : null;
+    return el("div", null, el("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px" },
+      el("div", { cls: "legend", style: "margin:0" }, series.map(s => el("span", null, el("i", { cls: "sw", style: `background:${s.color}` }), s.name))), bandBtn), svg,
+      el("details", null, el("summary", { text: "Show as table" }), table(["Wave"].concat(series.map(s => s.name)),
+        labels.map((w, i) => [w].concat(series.map(s => { const p = s.points[i]; return p && p.v != null ? pct(p.v) : "–"; }))))));
+  }
+
+  // ---- derived numbers ----
+  const brandRow = (e, n) => (L.brands[e] || []).find(b => b.name === n);
+  const hBrand = (w, e, n) => w && w.brands && w.brands[e] && w.brands[e][n] ? w.brands[e][n] : [null, null];
+  const visOf = n => mean(E.map(e => { const b = brandRow(e, n); return b && b.mention ? b.mention.rate : null; }));
+  const visWave = (w, n) => mean(w.engines.map(e => n === B && w.headline[e] && w.headline[e].mention ? w.headline[e].mention.rate : hBrand(w, e, n)[0]));
+  const sovWave = (w, n) => mean(w.engines.map(e => hBrand(w, e, n)[1]));
+  const hl = m => mean(E.map(e => L.headline[e] && L.headline[e][m] ? L.headline[e][m].rate : null));
+  const hlWave = (w, m) => mean(w.engines.map(e => w.headline[e] && w.headline[e][m] ? w.headline[e][m].rate : null));
+  const board = brandsOrder.map(n => ({
+    name: n, me: n === B, vis: visOf(n), prevVis: prev ? visWave(prev, n) : null,
+    sov: mean(E.map(e => { const b = brandRow(e, n); return b ? b.sov : null; })),
+    first: mean(E.map(e => { const b = brandRow(e, n); return b && b.first ? b.first.rate : null; })),
+    cited: mean(E.map(e => { const b = brandRow(e, n); return b && b.has_domain && b.cited ? b.cited.rate : null; })),
+    per: E.map(e => { const b = brandRow(e, n); return b && b.mention ? b.mention.rate : null; }),
+  })).sort((a, b) => (b.vis || 0) - (a.vis || 0));
+  const myRank = board.findIndex(b => b.me) + 1;
+  const totalAns = E.reduce((s, e) => s + L.answers[e], 0), totalExp = E.reduce((s, e) => s + L.expected[e], 0);
+  const promptStatus = g => {
+    const r = mean(E.map(e => g.cells[e] && g.cells[e][1] ? g.cells[e][0] / g.cells[e][1] : null));
+    if (L.gaps.some(x => x.pid === g.pid)) return ["crit", "Gap"];
+    if (r == null) return ["", "No data"];
+    return r >= .8 ? ["good", "Owned"] : r >= .2 ? ["warn", "Movable"] : ["", "Absent"];
+  };
+
+  // ---- actions state ----
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  const AKEY = `pwb:${B}:actions`;
+  let saved = {}; try { saved = JSON.parse(store.get(AKEY) || "{}"); } catch (e) {}
+  const acts = DATA.actions.map(a => Object.assign({}, a, { status: saved[a.id] || a.status || "todo" }));
+  const LBL = { todo: "To do", doing: "In progress", done: "Done" };
+  const setStatus = (a, s) => { a.status = s; saved[a.id] = s; store.set(AKEY, JSON.stringify(saved)); renderBoard(); renderMoves(); renderNavCounts(); };
+  const TIERBARS = t => /^strong/i.test(t || "") ? 3 : /^moderate/i.test(t || "") ? 2 : /^(weak|null|experimental)/i.test(t || "") ? 1 : 0;
+  const sig = t => { const n = TIERBARS(t); return el("span", { cls: "sig", title: `Evidence: ${t || "n/a"}` }, [1, 2, 3].map(i => el("b", { cls: i <= n ? "on" : null }))); };
+  function download() {
+    const blob = new Blob([JSON.stringify(acts, null, 2)], { type: "application/json" });
+    const u = URL.createObjectURL(blob); const a = el("a", { href: u, download: "actions.json" }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+  }
+
+  // ---- theme ----
+  const savedTheme = store.get("pwb:theme"); if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+  const toggleTheme = () => { const n = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; store.set("pwb:theme", n); };
+
+  // ---- shell ----
+  const VIEWS = [["overview", "Overview", "Monitor"], ["actions", "Actions", "Monitor"], ["competitors", "Competitors", "Analyze"], ["prompts", "Prompts", "Analyze"],
+    ["opportunities", "Opportunities", "Analyze"], ["sources", "Sources", "Analyze"], ["content", "Content", "Analyze"]];
+  const navLinks = {}, navCnt = {};
+  const nav = el("nav", { cls: "nav", "aria-label": "Views" });
+  let lastH = null;
+  VIEWS.forEach(([id, t, h]) => {
+    if (h !== lastH) { nav.append(el("div", { cls: "h", text: h })); lastH = h; }
+    navCnt[id] = el("span", { cls: "cnt num" });
+    navLinks[id] = el("a", { href: "#" + id }, icon(id), t, navCnt[id]);
+    nav.append(navLinks[id]);
+  });
+  function renderNavCounts() {
+    const open = acts.filter(a => a.status !== "done").length;
+    navCnt.actions.textContent = open || ""; navCnt.actions.hidden = !open;
+    navCnt.prompts.textContent = L.n_prompts; navCnt.competitors.textContent = brandsOrder.length;
+    navCnt.opportunities.textContent = (L.gaps.length + L.movable.length) || ""; navCnt.opportunities.hidden = !(L.gaps.length + L.movable.length);
+    navCnt.overview.hidden = navCnt.sources.hidden = navCnt.content.hidden = true;
+  }
+  const logoMark = sg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", style: "stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round" });
+  logoMark.append(sg("path", { d: "M5 15v4M10 10v9M15 6v13M20 3v16" }));
+  const rail = el("aside", { cls: "rail" },
+    el("div", { cls: "logo" }, el("span", { cls: "m" }, logoMark), el("div", null, "Promptwatch-Buster", el("small", { text: "AI visibility console" }))),
+    el("div", { cls: "proj" }, el("span", { cls: "av", text: B[0] }), el("div", { style: "min-width:0" }, el("b", { text: B }), el("span", { text: DATA.domain || "" }))),
+    nav,
+    el("div", { cls: "foot" },
+      el("div", { cls: "live" }, el("i"), `Wave ${L.wave}`),
+      el("div", { text: `${H.length} wave${H.length === 1 ? "" : "s"} · ${totalAns}/${totalExp} answers` }),
+      el("div", { text: `${DATA.country.toUpperCase()}/${DATA.language} · logged-out · Renderdata` })));
+  const crumbTitle = el("b");
+  const top = el("div", { cls: "top" },
+    el("div", { cls: "crumb" }, el("span", { text: B }), el("span", { text: "/" }), crumbTitle),
+    el("div", { cls: "tools" },
+      el("span", { cls: "pillx num", text: L.date }),
+      E.map(e => el("span", { cls: "pillx" }, el("i", { style: `background:${sv(ESLOT[e])}` }), ESHORT[e])),
+      el("button", { cls: "btn icon", onclick: toggleTheme, "aria-label": "Toggle light or dark theme", title: "Theme" }, icon("theme", 15))));
+  const views = {};
+  const viewBox = el("div");
+  VIEWS.forEach(([id]) => { views[id] = el("div", { cls: "view", id: "v-" + id, hidden: "" }); viewBox.append(views[id]); });
+  app.append(el("div", { cls: "shell" }, rail, el("main", null, top, viewBox)));
+  const head = (id, title, sub, right) => views[id].append(el("div", { cls: "vh" }, el("div", null, el("h1", { text: title }), sub && el("p", { text: sub })), right));
+
+  // ================= OVERVIEW =================
+  let movesBox;
+  (function () {
+    const v = views.overview, vis = hl("mention"), prevVis = prev ? hlWave(prev, "mention") : null;
+    head("overview", `${B} in AI answers`, `How often ChatGPT, Gemini and Google's AI Overviews name ${B} for the questions your buyers ask. Ranges are 95%: a move inside them is noise.`);
+    const visSeries = H.map(w => hlWave(w, "mention"));
+    const hero = card("hero c7", null, null, null,
+      el("div", null,
+        el("div", { cls: "lbl" }, el("span", { cls: "sw", style: "background:var(--you)" }), "Visibility · share of answers that name you"),
+        el("div", { cls: "big num" }, String(vis == null ? "–" : Math.round(vis * 100)), el("sup", { text: "%" })),
+        el("div", { cls: "sub" }, el("span", { cls: "rank" }, `#${myRank} of ${brandsOrder.length}`, el("span", { style: "color:var(--ink-3);font-weight:500", text: "tracked brands" })),
+          deltaEl(vis, prevVis, prev && prev.wave) || el("span", { text: "First wave: deltas start next run" })),
+        el("div", { style: "margin-top:20px" }, spark(visSeries, "var(--you)", 280, 48),
+          el("div", { cls: "note", style: "margin-top:6px", text: `${L.n_prompts} prompts × ${E.map(e => `${DATA.runs[e] || 1} ${ESHORT[e]}`).join(", ")} runs` }))),
+      el("div", { cls: "ebreak" }, E.map(e => {
+        const c = L.headline[e] && L.headline[e].mention || { rate: null, lo: 0, hi: 0 }, col = sv(ESLOT[e]);
+        return hover(el("div", { cls: "erow" },
+          el("span", { cls: "n" }, el("span", { cls: "sw", style: `background:${col}` }), ESHORT[e]),
+          el("span", { cls: "ci" }, el("span", { cls: "band", style: `left:${c.lo * 100}%;width:${(c.hi - c.lo) * 100}%;background:${col}` }), el("span", { cls: "pt", style: `left:${(c.rate || 0) * 100}%;background:${col}` })),
+          el("span", { cls: "v num", text: pct(c.rate) })), () => [el("b", { text: ENG[e] }), tr("Named", pct(c.rate)), tr("95% range", rng(c))]);
+      }), el("div", { cls: "axis", style: "grid-template-columns:130px minmax(0,1fr) 54px;padding:0" }, el("span"), el("div", null, ["0", "50", "100%"].map(t => el("span", { text: t }))), el("span"))));
+    const meB = board.find(b => b.me);
+    const kpi = (label, val, series, d, note) => card("kpi", null, null, null, el("div", { cls: "lbl", text: label }), el("div", { cls: "v num", text: val }),
+      el("div", { cls: "row" }, el("div", null, d || el("span", { cls: "note", text: note || "" })), spark(series, "var(--you)")));
+    const kpis = el("div", { cls: "kpis c5" },
+      kpi("Share of voice", pct(meB.sov), H.map(w => sovWave(w, B)), prev && deltaEl(meB.sov, sovWave(prev, B), prev.wave), "of all brand mentions"),
+      kpi("Named first", pct(hl("first")), H.map(w => hlWave(w, "first")), prev && deltaEl(hl("first"), hlWave(prev, "first"), prev.wave), "top of the answer"),
+      kpi("Your site cited", pct(hl("cited")), H.map(w => hlWave(w, "cited")), prev && deltaEl(hl("cited"), hlWave(prev, "cited"), prev.wave), "as a source"),
+      L.aio != null ? kpi("AI Overview shown", pct(L.aio), H.map(w => w.aio), prev && deltaEl(L.aio, prev.aio, prev.wave), "on tracked searches")
+        : kpi("Opportunities", String(L.gaps.length + L.movable.length), [], null, `${L.gaps.length} gaps · ${L.movable.length} movable`));
+    const engCards = E.map(e => {
+      const h = L.headline[e], c = h.mention || { rate: null }, col = sv(ESLOT[e]);
+      const tape = el("div", { cls: "tape", "aria-label": `${ENG[e]}: each tick is one run, lit when it named ${B}` }, L.grid.map(g => {
+        const [n, t] = g.cells[e] || [0, 0]; if (!t) return null;
+        return hover(el("span", { cls: "p" }, Array.from({ length: t }, (_, i) => el("span", { cls: "t", style: i < n ? `background:${col}` : null }))),
+          () => [el("b", { text: g.text }), tr(ENG[e], `${n}/${t} runs named you`)]);
+      }));
+      return card("eng c4", null, null, null,
+        el("div", { cls: "top2" }, el("span", { cls: "lbl" }, el("span", { cls: "sw", style: `background:${col}` }), ENG[e]), deltaEl(c.rate, prev && prev.headline[e] && prev.headline[e].mention ? prev.headline[e].mention.rate : null, prev && prev.wave)),
+        el("div", { cls: "v num", text: pct(c.rate) }), el("div", { cls: "rng num", text: h.mention ? `95% range ${rng(h.mention)}` : "no data" }),
+        tape,
+        el("div", { cls: "mini3" },
+          el("div", null, el("b", { cls: "num", text: pct(h.first && h.first.rate) }), el("span", { text: "named first" })),
+          el("div", null, el("b", { cls: "num", text: pct(h.cited && h.cited.rate) }), el("span", { text: "site cited" })),
+          el("div", null, el("b", { cls: "num", text: pct(L.nocite[e]) }), el("span", { text: "no sources" }))));
+    });
+    const lb = card("flush c8", "Brand leaderboard", "Averaged across engines. Hover a row for each engine.", null,
+      table(["#", "Brand", "Visibility", "Δ", "Share of voice", "Named first", "Cited"], board.map((b, i) => {
+        const nameCell = hover(el("span", { cls: "bname" }, el("span", { cls: "sw", style: `background:${sv(BSLOT[b.name])}` }), b.name, b.me ? el("span", { cls: "you-tag", text: "YOU" }) : null),
+          () => [el("b", { text: b.name })].concat(E.map((e, j) => tr(ENG[e], pct(b.per[j])))));
+        return [el("span", { cls: "rk num", text: String(i + 1) }), nameCell, meter(b.vis, sv(BSLOT[b.name])), deltaEl(b.vis, b.prevVis) || el("span", { cls: "note", text: "–" }),
+          el("span", { cls: "num", text: pct(b.sov) }), el("span", { cls: "num", text: pct(b.first) }), el("span", { cls: "num", text: b.cited == null ? "–" : pct(b.cited) })];
+      }), [4, 5, 6], i => board[i].me ? "me" : null));
+    movesBox = el("div", { cls: "moves" });
+    const moves = card("c4", "Next moves", "Top open actions, strongest evidence first.", el("a", { href: "#actions", cls: "note", text: "All →" }), movesBox);
+    const g = el("div", { cls: "g" }, hero, kpis, ...engCards, lb, moves);
+    if (H.length > 1) g.append(card("c12", "Visibility by engine, wave by wave", "Hover for values. Ranges are wide with few prompts: toggle them on before reading a move as real.", null,
+      lineChart(E.map(e => ({ name: ESHORT[e], color: sv(ESLOT[e]), points: H.map(w => { const c = w.headline[e] && w.headline[e].mention; return c ? { v: c.rate, lo: c.lo, hi: c.hi } : null; }) })), H.map(w => w.wave), "Mention rate by wave and engine")));
+    v.append(g);
+  })();
+  function renderMoves() {
+    const open = acts.filter(a => a.status !== "done").sort((a, b) => (a.source === "auto") - (b.source === "auto") || TIERBARS(b.tier) - TIERBARS(a.tier)).slice(0, 4);
+    movesBox.replaceChildren(...(open.length ? open.map((a, i) => el("div", { cls: "move", role: "link", tabindex: "0", onclick: () => { location.hash = "#actions"; }, onkeydown: ev => { if (ev.key === "Enter") location.hash = "#actions"; } },
+      el("span", { cls: "i num", text: String(i + 1) }),
+      el("div", null, el("div", { cls: "t", text: a.title }), el("div", { cls: "m" }, sig(a.tier), el("span", { text: a.tier || "" }), a.metric ? el("span", { text: "· " + a.metric }) : null))))
+      : [empty("All actions done. Run the next wave to see what moved.")]));
+  }
+
+  // ================= ACTIONS =================
+  const boardBox = el("div", { cls: "board" }), progBox = el("div", { cls: "prog" });
+  function renderBoard() {
+    const n = acts.length, cnt = s => acts.filter(a => a.status === s).length;
+    progBox.replaceChildren(el("span", { cls: "note num", text: `${cnt("done")}/${n} done` }),
+      el("span", { cls: "bar" }, n ? el("b", { style: `width:${cnt("done") / n * 100}%;background:var(--good)` }) : null, n ? el("b", { style: `width:${cnt("doing") / n * 100}%;background:var(--warning)` }) : null));
+    boardBox.replaceChildren(...["todo", "doing", "done"].map(s => {
+      const items = acts.filter(a => a.status === s);
+      return el("div", { cls: "col " + s }, el("div", { cls: "hd" }, el("i"), LBL[s], el("span", { cls: "num", text: String(items.length) })),
+        ...(items.length ? items.map(a => {
+          const d = a.detail ? el("div", { cls: "d", text: a.detail, title: "Click to expand", onclick: ev => ev.currentTarget.classList.toggle("open") }) : null;
+          const next = s === "todo" ? ["Start", "doing"] : s === "doing" ? ["Mark done", "done"] : ["Reopen", "todo"];
+          return el("div", { cls: "act " + s },
+            el("div", { cls: "m" }, el("span", { cls: "tag" }, sig(a.tier), a.tier || "–"), a.metric ? el("span", { cls: "tag", text: a.metric }) : null),
+            el("div", { cls: "t", text: a.title }), d,
+            a.prompts && a.prompts.length ? el("div", { cls: "chips" }, a.prompts.map(p => el("span", { cls: "code", text: p }))) : null,
+            el("div", { cls: "f" },
+              el("span", { cls: "src", text: [a.source === "auto" ? "Auto-suggested" : "From Claude", a.owner, a.due && "due " + a.due].filter(Boolean).join(" · ") }),
+              el("div", { style: "display:flex;gap:6px" },
+                s === "doing" ? el("button", { cls: "btn", onclick: () => setStatus(a, "todo"), text: "Back" }) : null,
+                el("button", { cls: "btn" + (s === "done" ? "" : " pri"), onclick: () => setStatus(a, next[1]), text: next[0] }))));
+        }) : [empty(s === "done" ? "Nothing shipped yet." : s === "doing" ? "Start something from To do." : "Nothing queued.")]));
+    }));
+  }
+  head("actions", "Actions", "What to do next, tied to a number the next wave will check. Bars show evidence strength. Status saves in this browser; download the file and give it to Claude to keep the project in sync.",
+    el("div", { cls: "toolbar" }, progBox, el("button", { cls: "btn", onclick: download }, icon("download", 14), "actions.json")));
+  views.actions.append(boardBox);
+
+  // ================= COMPETITORS =================
+  (function () {
+    let engSel = E[0];
+    const dwBox = el("div"), engSeg = el("div", { cls: "seg", role: "group", "aria-label": "Engine" });
+    function renderDW() {
+      engSeg.replaceChildren(...E.map(e => el("button", { "aria-pressed": String(engSel === e), onclick: () => { engSel = e; renderDW(); } }, el("span", { cls: "sw", style: `background:${sv(ESLOT[e])}` }), ESHORT[e])));
+      const rows = (L.brands[engSel] || []).slice().sort((a, b) => (b.mention ? b.mention.rate : 0) - (a.mention ? a.mention.rate : 0));
+      dwBox.replaceChildren(...rows.map(b => {
+        const c = b.mention || { rate: 0, lo: 0, hi: 0 }, col = sv(BSLOT[b.name]);
+        return hover(el("div", { cls: "dw" },
+          el("span", { cls: "bname" }, el("span", { cls: "sw", style: `background:${col}` }), b.name, b.me ? el("span", { cls: "you-tag", text: "YOU" }) : null),
+          el("div", { cls: "track" }, el("div", { cls: "wh", style: `left:${c.lo * 100}%;width:${(c.hi - c.lo) * 100}%` }), el("div", { cls: "dt", style: `left:${c.rate * 100}%;background:${col}` })),
+          el("div", { cls: "v num" }, pct(c.rate), el("small", { text: ` ${rng(c)}` }))),
+          () => [el("b", { text: `${b.name} · ${ENG[engSel]}` }), tr("Named", `${pct(c.rate)} (${rng(c)})`), tr("Named first", pct(b.first && b.first.rate)), tr("Site cited", b.has_domain ? pct(b.cited && b.cited.rate) : "no domain set"), tr("Share of voice", pct(b.sov))]);
+      }), el("div", { cls: "axis" }, el("span"), el("div", null, ["0", "25", "50", "75", "100%"].map(t => el("span", { text: t }))), el("span")));
+    }
+    renderDW();
+    const legend = el("div", { cls: "legend" }, brandsOrder.slice(0, 8).map(n => el("span", null, el("i", { cls: "sw", style: `background:${sv(BSLOT[n])}` }), n)),
+      brandsOrder.length > 8 ? el("span", null, el("i", { cls: "sw", style: "background:var(--other)" }), "Other") : null);
+    const sovRows = E.map(e => {
+      const segs = []; let other = 0;
+      (L.brands[e] || []).forEach(b => { if (BSLOT[b.name]) segs.push(b); else other += b.sov; });
+      return el("div", { cls: "sovr" }, el("span", { cls: "bname" }, el("span", { cls: "sw", style: `background:${sv(ESLOT[e])}` }), ESHORT[e]),
+        el("div", { cls: "stack" }, segs.filter(b => b.sov > 0).map(b => hover(el("div", { cls: DARK_INK[BSLOT[b.name]] ? "dk" : null, style: `flex:${b.sov} 0 0;background:${sv(BSLOT[b.name])}`, text: b.sov >= .1 ? pct(b.sov) : "" }),
+          () => [el("b", { text: b.name }), tr(`Share of voice · ${ENG[e]}`, pct(b.sov))])),
+          other > 0 ? el("div", { style: `flex:${other} 0 0;background:var(--other)`, text: other >= .1 ? pct(other) : "" }) : null));
+    });
+    const sovTable = table(["Brand"].concat(E.map(e => ENG[e])), brandsOrder.map(n => [n].concat(E.map(e => { const b = brandRow(e, n); return b ? pct(b.sov) : "–"; }))), E.map((_, i) => i + 1));
+    const disc = L.discovered.length ? table(["Name", "In answers", "Engines", "Prompts", "Likely domain", "Cited alongside"],
+      L.discovered.map(x => [el("b", { text: x.name }), meter(x.share), el("span", { cls: "dots3" }, x.engines.map(e => el("span", null, el("i", { cls: "sw", style: `background:${sv(ESLOT[e])}` }), ESHORT[e]))),
+        String(x.prompts), x.domain ? el("span", { cls: "bname" }, fav(x.domain), x.domain) : el("span", { cls: "note", text: "?" }), el("span", { cls: "note", text: x.sources.slice(0, 4).join(", ") || "–" })]), [3])
+      : empty("No untracked brands detected.");
+    head("competitors", "Competitors", "Who the engines name and how often. The line through each dot is the 95% range: if two lines overlap, there's no real difference yet.");
+    const g = el("div", { cls: "g" },
+      card("c7", "Named in answers", "Per engine. Hover a row for named-first, citations and share of voice.", null, el("div", { style: "margin-bottom:8px" }, engSeg), dwBox),
+      card("c5", "Share of voice", "Share of all brand mentions. Relative only: read it beside the absolute rates.", null, legend, ...sovRows, el("details", null, el("summary", { text: "Show as table" }), sovTable)),
+      card("flush c12", "Brands the engines name that you don't track", "Auto-detected. Add real rivals to competitors in config.json, then rerun report and dashboard (free).", null, disc));
+    if (H.length > 1 && H.some(w => w.brands)) g.append(card("c12", "Visibility by brand, wave by wave", "Averaged across engines.", null,
+      lineChart(brandsOrder.slice(0, 8).map(n => ({ name: n, color: sv(BSLOT[n]), bold: n === B, points: H.map(w => ({ v: visWave(w, n) })) })), H.map(w => w.wave), "Visibility by brand and wave")));
+    views.competitors.append(g);
+  })();
+
+  // ================= PROMPTS =================
+  (function () {
+    let q = "", intent = "all";
+    const intents = ["all"].concat([...new Set(L.grid.map(g => g.intent).filter(Boolean))]);
+    const seg = el("div", { cls: "seg", role: "group", "aria-label": "Intent" }), body = el("div");
+    const input = el("input", { cls: "search", type: "search", placeholder: "Search prompts…", "aria-label": "Search prompts", oninput: ev => { q = ev.target.value.toLowerCase(); render(); } });
+    const tape = (c, e) => { const [n, t] = c || [0, 0]; if (!t) return el("span", { cls: "note", text: "–" });
+      return el("span", { style: "display:inline-flex;align-items:center;gap:8px" }, el("span", { cls: "tape", style: "margin:0" }, el("span", { cls: "p" }, Array.from({ length: t }, (_, i) => el("span", { cls: "t", style: i < n ? `background:${sv(ESLOT[e])}` : null })))), el("span", { cls: "num note", text: `${n}/${t}` })); };
+    function render() {
+      seg.replaceChildren(...intents.map(i => el("button", { "aria-pressed": String(intent === i), onclick: () => { intent = i; render(); }, text: i === "all" ? "All" : i })));
+      const rows = L.grid.filter(g => (intent === "all" || g.intent === intent) && (!q || g.text.toLowerCase().includes(q) || g.pid.includes(q)));
+      body.replaceChildren(rows.length ? table(["Prompt", "Status", "Intent"].concat(E.map(e => ESHORT[e]), ["Demand"]),
+        rows.map(g => { const [k, t] = promptStatus(g); return [el("div", null, el("div", { text: g.text }), el("div", { cls: "code", text: `${g.pid} · ${g.group || ""}` })), st(k, t), el("span", { cls: "tag", text: g.intent || "–" })]
+          .concat(E.map(e => tape(g.cells[e], e)), [g.impressions ? el("span", { cls: "num", text: g.impressions.toLocaleString() }) : el("span", { cls: "note", text: "–" })]); }), [3 + E.length])
+        : empty("No prompts match."));
+    }
+    render();
+    head("prompts", "Prompts", "Every question in the panel. Each tick is one run, lit when the engine named you.", el("div", { cls: "toolbar" }, input));
+    views.prompts.append(card("flush", null, null, null, el("div", { style: "padding:14px 18px 0" }, seg), body),
+      el("p", { cls: "note", style: "margin-top:16px;max-width:900px" },
+        "Method: rates are per answer, averaged over prompts, with 95% ranges that treat the prompt as the unit (repeat runs aren't independent). ",
+        "A Google search with no AI Overview counts as not visible. Answers come from logged-out sessions in one country via Renderdata, so personalized users may see different answers. ",
+        "Mention, citation and named-first are different outcomes. Auto-detected brands and sitemap matches are heuristics."));
+  })();
+
+  // ================= OPPORTUNITIES =================
+  (function () {
+    const riv = r => el("div", { style: "display:grid;gap:4px" }, r.map(x => el("span", { cls: "bname", style: "font-weight:400" }, el("span", { cls: "sw", style: `background:${sv(BSLOT[x.name])}` }), x.name, el("span", { cls: "num note", text: pct(x.rate) }))));
+    const gapT = L.gaps.length ? table(["Prompt", "You", "Rivals named", "Demand"], L.gaps.map(g => [el("div", null, el("div", { text: g.text }), el("div", { cls: "code", text: `${g.pid} · ${g.intent || ""}` })), meter(g.me, "var(--you)"), riv(g.rivals),
+      el("div", { cls: "num" }, g.impressions ? `${g.impressions.toLocaleString()} impr` : "–", g.position ? el("div", { cls: "note", text: `rank ~#${Math.round(g.position)}` }) : null)]))
+      : empty("No gaps at this threshold (a rival ≥50% while you're <20%).");
+    const movT = L.movable.length ? table(["Prompt", "You", "Alongside"], L.movable.map(m => [el("div", null, el("div", { text: m.text }), el("div", { cls: "code", text: m.pid })), meter(m.me, "var(--you)"), el("span", { cls: "note", text: m.rivals.join(", ") || "–" })]))
+      : empty("No prompts in the 20–80% band.");
+    const intT = table(["Intent", "Prompts"].concat(E.map(e => ENG[e])), L.intents.map(it => [el("b", { text: it.intent }), String(it.prompts)].concat(E.map(e => {
+      const c = it.cells[e]; return el("div", null, meter(c.me, "var(--you)"), el("div", { cls: "note", text: c.rival ? `best rival ${c.rival} ${pct(c.rival_rate)}` : "no rival named" }));
+    }))), [1]);
+    head("opportunities", "Opportunities", "Where to push. Gaps are prompts rivals own. Movable prompts are ones you already win sometimes, so they tip fastest.");
+    views.opportunities.append(el("div", { cls: "g" },
+      card("flush c6", "Gaps: rivals named, you're not", "Ranked by gap × search demand when seeded from Search Console or Bing.", el("span", { cls: "st crit" }, el("i"), String(L.gaps.length)), gapT),
+      card("flush c6", "Movable prompts", "You're named in 20–80% of runs. Fastest wins.", el("span", { cls: "st warn" }, el("i"), String(L.movable.length)), movT),
+      card("flush c12", "By intent", "Where you win and lose by question type.", null, intT)));
+  })();
+
+  // ================= SOURCES =================
+  (function () {
+    const blist = (items, max, fmtv, color) => items.length ? el("ul", { cls: "blist" }, items.map(([h, v]) => el("li", null,
+      el("span", { cls: "nm", title: h }, fav(hostOf(h.includes("://") ? h : "https://" + h)), h),
+      el("span", { cls: "meter" }, el("span", { cls: "bar" }, el("b", { style: `width:${Math.max(2, v / max * 100)}%;${color ? "background:" + color : ""}` })), el("span", { cls: "num", style: "width:auto;min-width:36px", text: fmtv(v) })))))
+      : empty("None yet.");
+    const pagesMiss = DATA.pages.filter(p => p.ok && !p.names_you && p.named.length);
+    const pagesCard = DATA.pages.length ? card("flush c6", "Pages naming rivals but not you", `${DATA.pages.length} cited pages fetched. Pitch, review or partner targets.`, null,
+      pagesMiss.length ? table(["Page", "Cited", "Names"], pagesMiss.map(p => [safeUrl(p.url) ? el("a", { href: p.url, target: "_blank", rel: "noopener noreferrer", text: p.title || p.url }) : el("span", { text: p.title || p.url }), String(p.cites), el("span", { cls: "note", text: p.named.join(", ") })]), [1])
+        : empty("Every fetched page that names a rival also names you."))
+      : card("c6", "Pages naming rivals but not you", "Run pwb.py pages to fetch the most-cited pages and see exactly who each one names.", null, empty("Not fetched yet."));
+    const coT = table(["Brand", "Answers", "Sources over-represented when named (×lift)"], Object.keys(L.cosources).map(n => {
+      const v = L.cosources[n];
+      return [el("span", { cls: "bname" }, el("span", { cls: "sw", style: `background:${sv(BSLOT[n])}` }), n, n === B ? el("span", { cls: "you-tag", text: "YOU" }) : null), String(v.answers),
+        el("div", { cls: "chips" }, v.domains.length ? v.domains.map(([h, c, l]) => el("span", { cls: "tag" }, fav(h), " ", `${h} · ${c} · ×${l}`)) : "–")];
+    }), [1], i => Object.keys(L.cosources)[i] === B ? "me" : null);
+    head("sources", "Sources", "The sites engines read before naming brands. Third-party coverage here is the strongest-evidence lever you have.");
+    views.sources.append(el("div", { cls: "g" },
+      card("c6", "Outreach targets", "Cited when rivals are named and you aren't, and rarely when you are.", null, blist(L.targets, Math.max(1, ...L.targets.map(t => t[1])), v => v + " ans")),
+      pagesCard,
+      card("flush c12", "Where each brand gets named", "Domains cited in answers that name the brand. ×2 = twice as likely as in an average answer.", null, coT),
+      ...E.map(e => card("c4", `Top cited · ${ESHORT[e]}`, "Share of answers citing each domain.", el("span", { cls: "sw", style: `background:${sv(ESLOT[e])};margin-top:4px` }),
+        blist((L.top_domains[e] || []).slice(0, 10), Math.max(0.01, ...(L.top_domains[e] || []).map(d => d[1])), v => pct(v), sv(ESLOT[e]))))));
+  })();
+
+  // ================= CONTENT =================
+  (function () {
+    const fan = L.fanout.length ? table(["What ChatGPT searched", "×", "Your site"], L.fanout.map(f => [f.q, String(f.n),
+      f.status === "page" ? el("div", null, st("good", "Page exists"), el("div", { cls: "code", text: f.url })) :
+      f.status === "partial" ? el("div", null, st("warn", "Partial match"), el("div", { cls: "code", text: f.url })) :
+      f.status === "none" ? el("div", null, st("crit", "No page"), f.url ? el("div", { cls: "code", text: "closest: " + f.url }) : null) : st("", "Sitemap not checked")]), [1])
+      : empty("No ChatGPT search queries recorded in this wave.");
+    const quotes = L.excerpts.length ? L.excerpts.map(x => el("blockquote", { cls: "quote" }, el("div", { text: x.text }), el("div", { cls: "s" }, el("span", { cls: "sw", style: `background:${sv(ESLOT[x.engine])}` }), `${ENG[x.engine]} · ${x.pid}`)))
+      : [empty("You weren't named in any answer.")];
+    const repq = L.reputation.map(x => el("blockquote", { cls: "quote" }, el("div", { text: x.text }),
+      el("div", { cls: "s" }, el("span", { cls: "sw", style: `background:${sv(ESLOT[x.engine])}` }), `${ENG[x.engine]} · “${x.prompt}”` + (x.sources.length ? " · sources: " + x.sources.join(", ") : ""))));
+    const own = L.own_pages.length ? el("ul", { cls: "blist" }, L.own_pages.map(([u, n]) => el("li", null,
+      el("span", { cls: "nm" }, safeUrl(u) ? el("a", { href: u, target: "_blank", rel: "noopener noreferrer", text: u.replace(/^https?:\/\/(www\.)?/, "") }) : u),
+      meter(n / Math.max(1, ...L.own_pages.map(p => p[1])), "var(--you)")))) : empty("None of your pages were cited yet.");
+    head("content", "Content", "What the engines search for and how they describe you. Matching titles and lead passages to these searches is the best-supported on-page lever.");
+    views.content.append(el("div", { cls: "g" },
+      card("flush c7", "ChatGPT's own searches", L.site_pages ? `Matched against ${L.site_pages.toLocaleString()} URLs in your sitemap.` : "Set sitemap in config.json to check coverage.", null, fan),
+      card("c5", "Your pages that get cited", "Answers citing each URL.", null, own),
+      card("c12", "How the engines describe you", "Check prices, features and claims. A wrong fact comes from a source you can fix.", null,
+        el("div", { cls: "g" }, el("div", { cls: "c6" }, ...quotes), el("div", { cls: "c6" }, repq.length ? el("div", { cls: "lbl", style: "margin-bottom:10px", text: "Reputation prompts" }) : null, ...repq)))));
+  })();
+
+  // ---- routing ----
+  function route() {
+    const id = (location.hash || "#overview").slice(1), ok = views[id] ? id : "overview";
+    VIEWS.forEach(([v, t]) => { views[v].hidden = v !== ok; if (v === ok) { crumbTitle.textContent = t; document.title = `${t} · ${B} · AI visibility`; }
+      navLinks[v].toggleAttribute("aria-current", v === ok); if (v === ok) navLinks[v].setAttribute("aria-current", "page"); });
+    hideTip(); window.scrollTo(0, 0);
+  }
+  renderBoard(); renderMoves(); renderNavCounts();
+  addEventListener("hashchange", route); route();
+})();
+</script>
+</body>
+</html>

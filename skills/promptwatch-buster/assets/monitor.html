@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Visibility Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Light, quiet monitor. The focus brand's series color is the only accent; the comparison brand is plain ink. */
+:root {
+  color-scheme: light;
+  --canvas: #ffffff; --side: #fafafa; --panel: #ffffff; --soft: #f6f6f5; --well: #f2f2f0;
+  --ink: #111113; --ink-2: #4b4b50; --ink-3: #7c7c82; --ink-4: #ababb0;
+  --line: #ececea; --line-2: #e2e2df; --line-3: #d4d4d0;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948; --other: #c3c2b7;
+  --up: #0a8a3a; --down: #d03b3b; --flat: #8a8a90;
+  --shadow: 0 1px 2px rgba(17,17,19,.04);
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0e0e10; --side: #121214; --panel: #141416; --soft: #1a1a1d; --well: #1d1d20;
+  --ink: #ededef; --ink-2: #b9b9be; --ink-3: #85858b; --ink-4: #5c5c62;
+  --line: #222225; --line-2: #2a2a2e; --line-3: #36363b;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767; --other: #4a4a46;
+  --up: #2fbf71; --down: #e66767; --flat: #85858b; --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--canvas); color: var(--ink); }
+body { font: 13px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+.num { font-variant-numeric: tabular-nums; }
+a { color: inherit; text-decoration: none; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent, var(--s1)); outline-offset: 2px; border-radius: 6px; }
+
+.shell { display: grid; grid-template-columns: 216px minmax(0, 1fr); min-height: 100vh; }
+.side { background: var(--side); border-right: 1px solid var(--line); padding: 12px 10px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.bsw { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; font-weight: 600; }
+.bsw:hover { background: var(--well); }
+.bsw select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.bsw .chev { margin-left: auto; color: var(--ink-3); }
+.grp { display: grid; gap: 1px; }
+.grp .h { font-size: 11.5px; color: var(--ink-3); padding: 6px 8px 4px; display: flex; align-items: center; gap: 6px; }
+.grp a { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; color: var(--ink-2); font-weight: 500; }
+.grp a svg { width: 15px; height: 15px; flex: none; color: var(--ink-3); }
+.grp a:hover { background: var(--well); color: var(--ink); }
+.grp a[aria-current="page"] { background: var(--well); color: var(--ink); }
+.grp a[aria-current="page"] svg { color: var(--ink); }
+.grp a .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side .foot { margin-top: auto; font-size: 11.5px; color: var(--ink-3); padding: 0 8px; display: grid; gap: 6px; }
+.side .foot a { color: var(--ink-2); font-weight: 500; }
+
+main { min-width: 0; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: color-mix(in srgb, var(--canvas) 90%, transparent); backdrop-filter: blur(8px); z-index: 5; }
+.head h1 { font-size: 14px; margin: 0; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.head .r { display: flex; gap: 6px; align-items: center; }
+.ghost { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 5px 8px; border-radius: 7px; cursor: pointer; color: var(--ink-2); font-weight: 500; white-space: nowrap; }
+.ghost:hover { background: var(--well); color: var(--ink); }
+.wrap { padding: 16px 24px 40px; display: grid; gap: 14px; max-width: 1360px; }
+
+.strip svg { flex: none; color: var(--ink-3); }
+.strip { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--soft); border-radius: 10px; padding: 8px 12px; color: var(--ink-2); cursor: pointer; width: 100%; text-align: left; }
+.strip:hover { border-color: var(--line-3); }
+.strip b { font-weight: 600; color: var(--ink); }
+.strip .chev { margin-left: auto; color: var(--ink-3); }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.fsel { position: relative; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line-2); background: var(--panel); border-radius: 8px; padding: 5px 10px; font-weight: 500; box-shadow: var(--shadow); white-space: nowrap; }
+.fsel:hover { border-color: var(--line-3); }
+.fsel select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.fsel svg { width: 14px; height: 14px; color: var(--ink-3); }
+.fsel .chev { width: 12px; height: 12px; }
+
+.g { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; }
+.card { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; box-shadow: var(--shadow); min-width: 0; }
+.ch { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 14px 16px 0; flex-wrap: wrap; }
+.ch h2 { font-size: 13.5px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 6px; }
+.ch p { margin: 2px 0 0; color: var(--ink-3); font-size: 12px; }
+.cb { padding: 12px 16px 16px; }
+.seg { display: inline-flex; padding: 2px; background: var(--well); border-radius: 8px; gap: 2px; }
+.seg button { border: 0; background: transparent; border-radius: 6px; padding: 3px 9px; font-weight: 500; color: var(--ink-3); cursor: pointer; font-size: 12px; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.cmp { display: flex; gap: 6px; align-items: center; }
+.chipb { position: relative; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-2); border-radius: 7px; padding: 3px 8px; font-weight: 500; font-size: 12px; background: var(--panel); white-space: nowrap; }
+.chipb select { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.chipb .ln { width: 12px; height: 2px; border-radius: 1px; }
+svg text { fill: var(--ink-3); font-size: 11px; }
+
+/* logos */
+.lg { width: 20px; height: 20px; border-radius: 5px; flex: none; display: inline-grid; place-items: center; overflow: hidden; font-size: 10px; font-weight: 700; color: #fff; background: var(--ink-3); border: 1px solid var(--line); }
+.lg img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.lg.lgx { width: 28px; height: 28px; border-radius: 7px; font-size: 12px; }
+.stackl { display: flex; } .stackl .lg { width: 26px; height: 26px; border-radius: 6px; margin-left: -6px; box-shadow: 0 0 0 2px var(--panel); } .stackl .lg:first-child { margin-left: 0; }
+.eb { width: 26px; height: 26px; border-radius: 7px; display: inline-grid; place-items: center; font-size: 10.5px; font-weight: 700; flex: none; border: 1px solid var(--line-2); background: var(--soft); color: var(--ink-2); position: relative; }
+.eb i { position: absolute; right: -2px; bottom: -2px; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px var(--panel); }
+
+/* tables */
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--soft); }
+tr.focus td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+tr.click { cursor: pointer; }
+th.r, td.r { text-align: right; }
+.card table th:first-child, .card table td:first-child { padding-left: 16px; }
+.card table th:last-child, .card table td:last-child { padding-right: 16px; }
+.bn { display: flex; align-items: center; gap: 9px; font-weight: 500; white-space: nowrap; }
+.rk { color: var(--ink-3); width: 24px; }
+.dl { display: inline-flex; align-items: center; gap: 3px; font-weight: 500; font-size: 12px; white-space: nowrap; }
+.dl.up { color: var(--up); } .dl.down { color: var(--down); } .dl.flat { color: var(--flat); }
+.prk { color: var(--ink-3); display: inline-flex; gap: 10px; justify-content: flex-end; white-space: nowrap; }
+.prk b { color: var(--ink); font-weight: 500; min-width: 14px; text-align: right; }
+.meter { display: inline-flex; align-items: center; gap: 8px; }
+.meter .bar { width: 90px; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; }
+.meter .bar b { display: block; height: 100%; border-radius: 3px; }
+.tag { display: inline-flex; font-size: 11.5px; color: var(--ink-2); background: var(--well); border-radius: 5px; padding: 1px 7px; white-space: nowrap; }
+
+/* mentions */
+.mlist { display: grid; }
+.mi { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 16px; border-top: 1px solid var(--line); }
+.mi:hover { background: var(--soft); }
+.mi .t { font-weight: 600; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.mi .t span { color: var(--ink-3); font-weight: 400; font-size: 12px; }
+.mi .m { display: flex; gap: 8px; align-items: center; margin: 3px 0 2px; flex-wrap: wrap; }
+.pos { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; color: var(--ink-2); background: var(--well); border-radius: 5px; padding: 1px 7px; white-space: nowrap; }
+.pos.p1 { background: color-mix(in srgb, #eda100 16%, transparent); color: var(--ink); }
+.pos svg { width: 12px; height: 12px; }
+.mi .s { color: var(--ink-2); font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mi .s mark { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--ink); border-radius: 3px; padding: 0 2px; }
+.mi .s.open { -webkit-line-clamp: unset; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-2); background: var(--panel); border-radius: 8px; padding: 5px 10px; font-weight: 500; cursor: pointer; white-space: nowrap; box-shadow: var(--shadow); }
+.btn:hover { border-color: var(--line-3); }
+.btn svg { width: 14px; height: 14px; }
+.more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--line); }
+.search { border: 1px solid var(--line-2); background: var(--panel); border-radius: 8px; padding: 5px 10px; min-width: 220px; }
+.empty { color: var(--ink-3); text-align: center; padding: 28px 12px; }
+.note { color: var(--ink-3); font-size: 12px; }
+.tip { position: fixed; pointer-events: none; z-index: 30; background: var(--panel); border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: none; min-width: 150px; }
+.tip .r { display: flex; justify-content: space-between; gap: 14px; align-items: center; color: var(--ink-2); }
+.tip .r b { color: var(--ink); font-weight: 600; }
+.back { color: var(--ink-3); font-weight: 500; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.back:hover { color: var(--ink); }
+.ptitle { font-size: 18px; font-weight: 600; letter-spacing: -.01em; margin: 4px 0 0; }
+
+@media (max-width: 1080px) { .g { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 820px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); flex-direction: column; gap: 6px; padding: 10px 12px; }
+  .side .foot, .grp.watch, .grp .h { display: none; }
+  .grp.nav { display: flex; overflow-x: auto; scrollbar-width: none; gap: 2px; }
+  .grp.nav a { white-space: nowrap; }
+  .head { position: static; padding: 10px 16px; }
+  .wrap { padding: 14px 16px 32px; }
+  .mi { grid-template-columns: 26px minmax(0, 1fr); } .mi .stackl { grid-column: 2; }
+  .search { min-width: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+<script>const DATA = /*__DATA__*/null;</script>
+<div id="app"></div>
+<div class="tip" id="tip" role="tooltip"></div>
+<script>
+(function () {
+  "use strict";
+  const app = document.getElementById("app");
+  if (!DATA) { app.textContent = "No data. Run: pwb.py dashboard <config>"; return; }
+  const H = DATA.history, L = DATA.latest, B = DATA.brand, E = L.engines, P = DATA.prompts || [], FEED = DATA.feed || [];
+  const ENG = { chatgpt: "ChatGPT", gemini: "Gemini", google: "AI Overviews" };
+  const EINI = { chatgpt: "GPT", gemini: "G", google: "AIO" };
+  const ESLOT = { chatgpt: 1, gemini: 2, google: 3 };
+  const BRANDS = [B].concat(L.competitors);
+  const SLOT = {}; BRANDS.forEach((n, i) => { SLOT[n] = i < 8 ? i + 1 : 0; });
+  const col = n => SLOT[n] ? `var(--s${SLOT[n]})` : "var(--other)";
+  const pct = x => x == null || isNaN(x) ? "–" : Math.round(x * 100) + "%";
+  const mean = a => { const v = a.filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const ord = n => n + (n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th");
+  const PROMPT = Object.fromEntries(P.map(p => [p.id, p]));
+
+  // ---- safe DOM: scraped text only goes in through textContent ----
+  function el(tag, a, ...kids) {
+    const n = document.createElement(tag);
+    for (const k in (a || {})) { const v = a[k]; if (v == null || v === false) continue;
+      if (k === "text") n.textContent = v; else if (k === "cls") n.className = v; else if (k === "style") n.style.cssText = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v); }
+    for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    return n;
+  }
+  function sg(tag, a, txt) { const n = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in a) n.setAttribute(k, a[k]); if (txt != null) n.textContent = txt; return n; }
+  const PATHS = {
+    dashboard: "M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z", rankings: "M8 21V11M16 21V7M12 21V3M4 21h16",
+    sources: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
+    prompts: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", mentions: "M4 4h16v12H5.2L4 17.2zM8 9h8M8 12h5",
+    competitors: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
+    clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2", cal: "M3 5h18v16H3zM16 3v4M8 3v4M3 10h18", tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8zM7 7h.01",
+    spark: "M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z", chev: "M6 9l6 6 6-6", right: "M9 18l6-6-6-6", left: "M15 18l-6-6 6-6",
+    dl: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3", moon: "M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z",
+    ext: "M15 3h6v6M10 14L21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", trophy: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
+    eye: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+  };
+  const ic = (k, cls) => { const s = sg("svg", { viewBox: "0 0 24 24", width: 15, height: 15, "aria-hidden": "true", class: cls || "", style: "stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round" }); s.append(sg("path", { d: PATHS[k] })); return s; };
+  // brand logo: the site's favicon when a domain is known, a colored initial otherwise (and if the image fails)
+  function logo(n, cls) {
+    const box = el("span", { cls: "lg " + (cls || ""), style: `background:${col(n)}`, title: n, text: (n || "?")[0].toUpperCase() });
+    const d = (DATA.domains || {})[n];
+    if (d && /^[a-z0-9.-]+$/i.test(d)) { const img = el("img", { alt: "", loading: "lazy", src: `https://www.google.com/s2/favicons?domain=${d}&sz=64` });
+      img.onload = () => { if (img.naturalWidth > 16) { box.textContent = ""; box.style.background = ""; box.append(img); } }; }
+    return box;
+  }
+  const eb = e => el("span", { cls: "eb", title: ENG[e], text: EINI[e] }, el("i", { style: `background:var(--s${ESLOT[e]})` }));
+  const tip = document.getElementById("tip");
+  function showTip(ev, rows) { tip.replaceChildren(...rows); tip.style.display = "block"; const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = ev.clientX + 14, y = ev.clientY + 14; if (x + w > innerWidth - 8) x = ev.clientX - w - 14; if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+    tip.style.left = x + "px"; tip.style.top = y + "px"; }
+  const hideTip = () => { tip.style.display = "none"; };
+  const tr = (k, v, c) => el("div", { cls: "r" }, el("span", { style: "display:inline-flex;align-items:center;gap:6px" }, c ? el("span", { style: `width:8px;height:8px;border-radius:2px;background:${c}` }) : null, k), el("b", { cls: "num", text: v }));
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+  // ---- state + filters ----
+  const S = { focus: B, range: "30", tag: "all", model: "all", mode: "line", compare: null, shown: 30, q: "" };
+  const t = store.get("pwb:monitor-theme"); if (t) document.documentElement.dataset.theme = t;
+  const lastDate = H[H.length - 1].date;
+  const dayDiff = (a, b) => (new Date(b) - new Date(a)) / 864e5;
+  const engs = () => S.model === "all" ? E : [S.model];
+  const pids = () => P.filter(p => S.tag === "all" || p.intent === S.tag).map(p => p.id);
+  const waves = () => { const w = H.filter(x => S.range === "all" || dayDiff(x.date, lastDate) < +S.range); return w.length ? w : [H[H.length - 1]]; };
+  // visibility = per engine, mean over prompts of (runs naming the brand / runs); then mean over the selected engines
+  function vis(w, n, ids, metric = "mention") {
+    ids = ids || pids();
+    return mean(engs().map(e => { const c = w.cells && w.cells[e] && w.cells[e][n] && w.cells[e][n][metric];
+      if (!c) return metric === "mention" && S.tag === "all" && w.brands && w.brands[e] && w.brands[e][n] ? w.brands[e][n][0] : null;
+      return mean(ids.map(p => c[p] && c[p][1] ? c[p][0] / c[p][1] : null)); }));
+  }
+  const ranking = w => BRANDS.map(n => ({ n, v: vis(w, n) })).sort((a, b) => (b.v || 0) - (a.v || 0)).map((r, i) => Object.assign(r, { rank: i + 1 }));
+  const feed = () => { const ids = new Set(pids()), es = new Set(engs()); return FEED.filter(f => es.has(f.e) && ids.has(f.pid) && f.order.includes(S.focus)); };
+  const ago = ts => { if (!ts) return ""; const s = Math.max(0, (Date.now() - new Date(ts)) / 1e3);
+    return s < 3600 ? Math.max(1, Math.round(s / 60)) + "m ago" : s < 86400 ? Math.round(s / 3600) + "h ago" : Math.round(s / 86400) + "d ago"; };
+  function delta(now, before) { if (now == null || before == null) return el("span", { cls: "dl flat", text: "–" });
+    const d = Math.round((now - before) * 100), c = d > 0 ? "up" : d < 0 ? "down" : "flat";
+    return el("span", { cls: "dl " + c, title: "points vs the previous wave" }, d > 0 ? "↗" : d < 0 ? "↘" : "=", ` ${Math.abs(d)} pts`); }
+  const fsel = (iconK, value, opts, onchange, label, lead) => { const s = el("select", { "aria-label": label, onchange: ev => onchange(ev.target.value) },
+      opts.map(([v, t]) => el("option", { value: v, text: t, selected: v === value ? "" : null })));
+    return el("label", { cls: "fsel" }, lead || ic(iconK), (opts.find(o => o[0] === value) || opts[0])[1], ic("chev", "chev"), s); };
+  function filters() {
+    const tags = [...new Set(P.map(p => p.intent).filter(Boolean))];
+    return el("div", { cls: "filters" },
+      fsel(null, S.focus, BRANDS.map(n => [n, n]), v => { S.focus = v; S.compare = null; render(); }, "Brand", logo(S.focus)),
+      fsel("cal", S.range, [["7", "Last 7 days"], ["30", "Last 30 days"], ["90", "Last 90 days"], ["all", "All time"]], v => { S.range = v; render(); }, "Date range"),
+      fsel("tag", S.tag, [["all", "All tags"]].concat(tags.map(x => [x, x])), v => { S.tag = v; render(); }, "Tag"),
+      fsel("spark", S.model, [["all", "All models"]].concat(E.map(e => [e, ENG[e]])), v => { S.model = v; render(); }, "Model"));
+  }
+  function strip() {
+    const lastTs = FEED.reduce((m, f) => f.ts && f.ts > m ? f.ts : m, "") || lastDate + "T00:00:00Z";
+    const due = new Date(new Date(lastTs).getTime() + 14 * 864e5);
+    const txt = el("b", { cls: "num" });
+    const tick = () => { let s = Math.round((due - Date.now()) / 1e3); const over = s < 0; s = Math.abs(s);
+      const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60, p = x => String(x).padStart(2, "0");
+      txt.textContent = (over ? "overdue " : "") + (d ? d + "d " : "") + `${p(h)}:${p(m)}:${p(sec)}`; };
+    tick(); clearInterval(strip.timer); strip.timer = setInterval(() => { if (!txt.isConnected) return clearInterval(strip.timer); tick(); }, 1000);
+    const cmd = `python3 "${DATA.pwb || "pwb.py"}" run "${DATA.config || "config.json"}" --wave <next-wave>`;
+    return el("button", { cls: "strip", title: "Click to copy the run command", onclick: ev => { try { navigator.clipboard.writeText(cmd); ev.currentTarget.querySelector(".hint").textContent = "run command copied"; } catch (e) {} } },
+      ic("clock"), txt, el("span", { text: "until the next suggested wave" }), el("span", { cls: "note", text: `· ${P.length} prompts · ${H.length} wave${H.length === 1 ? "" : "s"} · last run ${ago(lastTs)}` }),
+      el("span", { cls: "note hint", style: "margin-left:auto" }), ic("right", "chev"));
+  }
+
+  // ---- visibility chart: focus brand in its color vs one comparison brand in ink ----
+  function visCard() {
+    const W = waves(), rk = ranking(W[W.length - 1]);
+    if (!S.compare || S.compare === S.focus) S.compare = (rk.find(r => r.n !== S.focus) || {}).n;
+    const series = [[S.focus, col(S.focus)], [S.compare, "var(--ink)"]].filter(s => s[0]);
+    const seen = {}, labels = W.map(w => { const k = w.date.slice(5); seen[k] = (seen[k] || 0) + 1; return k; });
+    const lab = W.map((w, i) => seen[labels[i]] > 1 ? `${labels[i]} · ${w.wave.split("-").pop()}` : new Date(w.date + "T12:00:00Z").toLocaleDateString("en", { day: "numeric", month: "short" }));
+    const vals = series.map(([n]) => W.map(w => vis(w, n)));
+    const max = Math.min(1, Math.max(.2, ...vals.flat().filter(v => v != null)) + .1), step = max > .6 ? .2 : .1, top = Math.ceil(max / step) * step;
+    const Wd = 640, Hd = 250, m = { l: 38, r: 12, t: 12, b: 28 }, iw = Wd - m.l - m.r, ih = Hd - m.t - m.b, n = W.length;
+    const bw = iw / n, xs = i => m.l + bw * (i + .5), ys = v => m.t + ih - v / top * ih;
+    const svg = sg("svg", { viewBox: `0 0 ${Wd} ${Hd}`, width: "100%", role: "img", "aria-label": `Visibility of ${series.map(s => s[0]).join(" and ")} by wave` });
+    for (let v = 0; v <= top + 1e-9; v += step) { svg.append(sg("line", { x1: m.l, x2: m.l + iw, y1: ys(v), y2: ys(v), style: `stroke:var(--line);stroke-width:1${v ? ";stroke-dasharray:3 3" : ""}` }));
+      svg.append(sg("text", { x: m.l - 8, y: ys(v) + 4, "text-anchor": "end" }, Math.round(v * 100) + "%")); }
+    W.forEach((w, i) => { if (i % 2 === 1 && S.mode === "line") svg.append(sg("rect", { x: m.l + bw * i, y: m.t, width: bw, height: ih, style: "fill:var(--soft)" }));
+      svg.append(sg("text", { x: xs(i), y: Hd - 8, "text-anchor": "middle" }, lab[i])); });
+    if (S.mode === "line") series.forEach(([nm, c], si) => {
+      const pts = vals[si].map((v, i) => v == null ? null : [xs(i), ys(v)]).filter(Boolean);
+      if (pts.length > 1) svg.append(sg("polyline", { points: pts.map(p => p.join(",")).join(" "), style: `fill:none;stroke:${c};stroke-width:2;stroke-linejoin:round` }));
+      pts.forEach(p => svg.append(sg("circle", { cx: p[0], cy: p[1], r: 3.5, style: `fill:${c};stroke:var(--panel);stroke-width:2` })));
+    });
+    else { const gw = Math.min(28, bw * .3); series.forEach(([nm, c], si) => vals[si].forEach((v, i) => { if (v == null) return;
+      const x = xs(i) + (si ? 1 : -1) * (gw / 2 + 1) - gw / 2, y = ys(v), h = m.t + ih - y;
+      svg.append(sg("path", { d: `M${x},${m.t + ih}V${y + Math.min(4, h)}q0,-4 4,-4h${gw - 8}q4,0 4,4V${m.t + ih}z`, style: `fill:${c}` })); })); }
+    const cross = sg("line", { y1: m.t, y2: m.t + ih, style: "stroke:var(--line-3);display:none" }); svg.append(cross);
+    const hit = sg("rect", { x: m.l, y: 0, width: iw, height: Hd, style: "fill:transparent" }); svg.append(hit);
+    hit.addEventListener("mousemove", ev => { const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * Wd / r.width, i = Math.max(0, Math.min(n - 1, Math.floor((x - m.l) / bw)));
+      cross.setAttribute("x1", xs(i)); cross.setAttribute("x2", xs(i)); cross.style.display = "";
+      showTip(ev, [el("div", { style: "font-weight:600;margin-bottom:4px", text: `${lab[i]} · wave ${W[i].wave}` })].concat(series.map(([nm, c], si) => tr(nm, pct(vals[si][i]), c)))); });
+    hit.addEventListener("mouseleave", () => { cross.style.display = "none"; hideTip(); });
+    const modeSeg = el("div", { cls: "seg", role: "group", "aria-label": "Chart type" }, [["line", "Line View"], ["bar", "Bar View"]].map(([k, t]) =>
+      el("button", { "aria-pressed": String(S.mode === k), onclick: () => { S.mode = k; render(); }, text: t })));
+    const cmpSel = el("label", { cls: "chipb" }, el("span", { cls: "ln", style: "background:var(--ink)" }), logo(S.compare), S.compare || "–",
+      el("select", { "aria-label": "Compare with", onchange: ev => { S.compare = ev.target.value; render(); } }, BRANDS.filter(b => b !== S.focus).map(b => el("option", { value: b, text: b, selected: b === S.compare ? "" : null }))));
+    const table = el("details", { style: "margin-top:8px" }, el("summary", { cls: "note", style: "cursor:pointer", text: "Show as table" }),
+      el("div", { cls: "tw" }, el("table", null, el("thead", null, el("tr", null, el("th", { text: "Wave" }), series.map(s => el("th", { cls: "r", text: s[0] })))),
+        el("tbody", null, W.map((w, i) => el("tr", null, el("td", { text: `${lab[i]} (${w.wave})` }), series.map((s, si) => el("td", { cls: "r num", text: pct(vals[si][i]) }))))))));
+    return el("div", { cls: "card" }, el("div", { cls: "ch" }, el("h2", { text: "Visibility" }),
+      el("div", { cls: "cmp" }, el("span", { cls: "chipb" }, el("span", { cls: "ln", style: `background:${col(S.focus)}` }), logo(S.focus), S.focus), cmpSel)),
+      el("div", { cls: "cb" }, el("div", { style: "margin-bottom:8px" }, modeSeg), svg, n < 2 ? el("div", { cls: "note", text: "One wave in this range. Lines appear from the second wave." }) : null, table));
+  }
+
+  // ---- industry ranking ----
+  function rankTable(full) {
+    const W = waves(), cur = W[W.length - 1], prev = W.length > 1 ? W[W.length - 2] : null;
+    const rk = ranking(cur), prk = prev ? Object.fromEntries(ranking(prev).map(r => [r.n, r])) : {};
+    const heads = full ? ["#", "Brand", "Visibility", "Change"].concat(engs().length > 1 ? engs().map(e => ENG[e]) : [], ["Named first", "Previous rank"]) : ["#", "Brand", "Visibility", "", "Previous Rank"];
+    const rows = rk.map(r => {
+      const p = prk[r.n], cells = [el("span", { cls: "rk num", text: String(r.rank) }), el("span", { cls: "bn" }, logo(r.n), r.n),
+        el("span", { cls: "num", text: pct(r.v) }), delta(r.v, p && p.v)];
+      if (full) { if (engs().length > 1) engs().forEach(e => { const keep = S.model; S.model = e; cells.push(el("span", { cls: "num", text: pct(vis(cur, r.n)) })); S.model = keep; });
+        cells.push(el("span", { cls: "num", text: pct(vis(cur, r.n, null, "first")) })); }
+      const mv = p ? p.rank - r.rank : 0;
+      cells.push(el("span", { cls: "prk num" }, el("span", { text: "#" }), el("b", { text: p ? String(p.rank) : "–" }), mv ? el("span", { cls: "dl " + (mv > 0 ? "up" : "down"), text: mv > 0 ? "▲" + mv : "▼" + -mv }) : null));
+      return el("tr", { cls: r.n === S.focus ? "focus" : null }, cells.map((c, i) => el("td", { cls: i >= 2 ? "r" : null }, c)));
+    });
+    return el("div", { cls: "tw" }, el("table", null, el("thead", null, el("tr", null, heads.map((h, i) => el("th", { cls: i >= 2 ? "r" : null, text: h })))), el("tbody", null, rows)));
+  }
+
+  // ---- mentions ----
+  function snippet(f, n) {
+    const s = (f.snip && f.snip[n]) || f.lead || "", box = el("div", { cls: "s", title: "Click to expand", onclick: ev => ev.currentTarget.classList.toggle("open") });
+    const i = s.toLowerCase().indexOf(n.toLowerCase());
+    if (i < 0) box.textContent = s; else box.append(s.slice(0, i), el("mark", { text: s.slice(i, i + n.length) }), s.slice(i + n.length));
+    return box;
+  }
+  function mentionItem(f, who) {
+    who = who || S.focus; const pos = f.order.indexOf(who) + 1, p = PROMPT[f.pid] || { text: f.pid };
+    return el("div", { cls: "mi" }, eb(f.e),
+      el("div", { style: "min-width:0" }, el("div", { cls: "t" }, el("a", { href: "#prompt/" + encodeURIComponent(f.pid), text: p.text }), el("span", { text: `${ago(f.ts)} · ${ENG[f.e]}` })),
+        pos ? el("div", { cls: "m" }, el("span", { cls: "pos" + (pos === 1 ? " p1" : "") }, pos === 1 ? ic("trophy") : "#", `${ord(pos)} position`)) : el("div", { cls: "m" }, el("span", { cls: "pos", text: `${who} not named` })),
+        snippet(f, pos ? who : (f.order[0] || who))),
+      el("div", { cls: "stackl" }, f.order.slice(0, 4).map(n => logo(n))));
+  }
+  function csv(rows) {
+    const q = v => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const out = [["time", "engine", "prompt", "position", "brands_in_order", "snippet"]].concat(rows.map(f => [f.ts, ENG[f.e], (PROMPT[f.pid] || {}).text || f.pid, f.order.indexOf(S.focus) + 1, f.order.join("; "), f.snip[S.focus] || ""]));
+    const blob = new Blob([out.map(r => r.map(q).join(",")).join("\n")], { type: "text/csv" });
+    const u = URL.createObjectURL(blob), a = el("a", { href: u, download: `${S.focus.toLowerCase().replace(/\W+/g, "-")}-mentions.csv` }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+  }
+  function mentionsCard(limit) {
+    let rows = feed(); if (S.q) rows = rows.filter(f => ((PROMPT[f.pid] || {}).text || "").toLowerCase().includes(S.q) || (f.snip[S.focus] || "").toLowerCase().includes(S.q));
+    const shown = rows.slice(0, limit || S.shown);
+    return el("div", { cls: "card" },
+      el("div", { cls: "ch" }, el("div", null, el("h2", null, "Recent ", logo(S.focus), ` ${S.focus} Mentions`), el("p", { text: `Answers that named ${S.focus} in the latest wave (${rows.length})` })),
+        el("button", { cls: "btn", onclick: () => csv(rows) }, ic("dl"), "Download")),
+      el("div", { cls: "mlist", style: "margin-top:12px" }, shown.length ? shown.map(f => mentionItem(f)) : el("div", { cls: "empty", text: `No answers named ${S.focus} with these filters.` })),
+      rows.length > shown.length ? el("div", { cls: "more" }, limit ? el("a", { cls: "btn", href: "#mentions", text: `View all ${rows.length} mentions` }) :
+        el("button", { cls: "btn", onclick: () => { S.shown += 30; render(); }, text: `Show more (${rows.length - shown.length})` })) : null);
+  }
+
+  // ---- views ----
+  const NAV = [["dashboard", "Dashboard"], ["rankings", "Rankings"], ["sources", "Sources"], ["prompts", "Prompts"], ["mentions", "Mentions"], ["competitors", "Competitors"]];
+  const VIEW = {
+    dashboard: () => [strip(), filters(), el("div", { cls: "g" }, visCard(),
+      el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", { text: "Industry ranking" }), el("p", { text: "Brands with the highest visibility" }))),
+        el("div", { style: "margin-top:10px" }, rankTable(false)))), mentionsCard(5)],
+    rankings: () => [filters(), el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", { text: "Rankings" }),
+      el("p", { text: `Latest wave in range. Visibility = share of answers naming the brand, averaged over prompts${engs().length > 1 ? " and models" : ""}.` }))), el("div", { style: "margin-top:10px" }, rankTable(true))),
+      el("p", { cls: "note", text: "With few prompts, moves of a few points are noise. The full console shows 95% ranges." })],
+    mentions: () => [filters(), el("div", null, el("input", { cls: "search", type: "search", placeholder: "Search prompts and snippets…", value: S.q, "aria-label": "Search mentions",
+      oninput: ev => { S.q = ev.target.value.toLowerCase(); const c = document.getElementById("mc"); c.replaceWith(Object.assign(mentionsCard(), { id: "mc" })); } })), Object.assign(mentionsCard(), { id: "mc" })],
+    prompts: () => {
+      const cur = waves().slice(-1)[0], ids = pids();
+      const rows = P.filter(p => ids.includes(p.id)).map(p => { const r = BRANDS.map(n => ({ n, v: vis(cur, n, [p.id]) })).sort((a, b) => (b.v || 0) - (a.v || 0));
+        return { p, me: vis(cur, S.focus, [p.id]), top: r[0], n: FEED.filter(f => f.pid === p.id && engs().includes(f.e)).length }; });
+      return [filters(), el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", { text: "Prompts" }), el("p", { text: "Click a prompt to read the answers." }))),
+        el("div", { cls: "tw", style: "margin-top:10px" }, el("table", null, el("thead", null, el("tr", null, ["Prompt", "Tag", `${S.focus} visibility`, "Top brand", "Answers"].map((h, i) => el("th", { cls: i >= 2 ? "r" : null, text: h })))),
+          el("tbody", null, rows.map(r => el("tr", { cls: "click", tabindex: "0", onclick: () => { location.hash = "#prompt/" + encodeURIComponent(r.p.id); }, onkeydown: ev => { if (ev.key === "Enter") location.hash = "#prompt/" + encodeURIComponent(r.p.id); } },
+            el("td", null, el("div", { style: "font-weight:500", text: r.p.text }), r.p.impressions ? el("div", { cls: "note num", text: `${r.p.impressions.toLocaleString()} impressions` }) : null),
+            el("td", null, el("span", { cls: "tag", text: r.p.intent || "–" })),
+            el("td", { cls: "r" }, el("span", { cls: "meter" }, el("span", { cls: "bar" }, el("b", { style: `width:${(r.me || 0) * 100}%;background:${col(S.focus)}` })), el("span", { cls: "num", text: pct(r.me) }))),
+            el("td", { cls: "r" }, r.top && r.top.v ? el("span", { cls: "bn", style: "justify-content:flex-end" }, logo(r.top.n), r.top.n, el("span", { cls: "note num", text: pct(r.top.v) })) : "–"),
+            el("td", { cls: "r num", text: String(r.n) })))))))];
+    },
+    prompt: id => {
+      const p = PROMPT[id]; if (!p) return [el("div", { cls: "empty", text: "Unknown prompt." })];
+      const cur = waves().slice(-1)[0], ans = FEED.filter(f => f.pid === id && engs().includes(f.e));
+      const r = BRANDS.map(n => ({ n, v: vis(cur, n, [id]) })).sort((a, b) => (b.v || 0) - (a.v || 0));
+      return [el("a", { cls: "back", href: "#prompts" }, ic("left"), "Prompts"), el("div", null, el("div", { cls: "ptitle", text: p.text }), el("div", { cls: "note", text: `${p.intent || "untagged"} · ${ans.length} answers in the latest wave` })),
+        filters(), el("div", { cls: "g" },
+          el("div", { cls: "card" }, el("div", { cls: "ch" }, el("h2", { text: "Who gets named" })), el("div", { cls: "cb" }, r.map(x => el("div", { style: "display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center;padding:6px 0" },
+            el("span", { cls: "bn" }, logo(x.n), x.n), el("span", { cls: "meter", style: "justify-content:flex-end" }, el("span", { cls: "bar" }, el("b", { style: `width:${(x.v || 0) * 100}%;background:${col(x.n)}` })), el("span", { cls: "num", text: pct(x.v) })))))),
+          el("div", { cls: "card" }, el("div", { cls: "ch" }, el("h2", { text: "Sources these answers cite" })), el("div", { cls: "cb" },
+            (() => { const c = {}; ans.forEach(f => f.doms.forEach(d => { c[d] = (c[d] || 0) + 1; })); const top = Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 10);
+              return top.length ? top.map(([d, k]) => el("div", { style: "display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line)" }, el("span", { text: d }), el("span", { cls: "note num", text: `${k} answer${k > 1 ? "s" : ""}` }))) : el("div", { cls: "empty", text: "No citations." }); })()))),
+        el("div", { cls: "card" }, el("div", { cls: "ch" }, el("h2", { text: "Answers" })), el("div", { cls: "mlist", style: "margin-top:12px" }, ans.length ? ans.map(f => mentionItem(f)) : el("div", { cls: "empty", text: "No answers with these filters." })))];
+    },
+    sources: () => {
+      const acc = {}; engs().forEach(e => (L.top_domains[e] || []).forEach(([d, v]) => { acc[d] = (acc[d] || 0) + v / engs().length; }));
+      const top = Object.entries(acc).sort((a, b) => b[1] - a[1]).slice(0, 25), mx = Math.max(.01, ...top.map(x => x[1]));
+      const co = (L.cosources || {})[S.focus];
+      return [filters(), el("div", { cls: "g" },
+        el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", { text: "Most cited sources" }), el("p", { text: "Share of answers citing each domain, latest wave." }))),
+          el("div", { cls: "cb" }, top.length ? top.map(([d, v]) => el("div", { style: "display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)" },
+            el("span", { cls: "bn", style: "overflow:hidden" }, el("span", { text: d })), el("span", { cls: "meter", style: "justify-content:flex-end" }, el("span", { cls: "bar" }, el("b", { style: `width:${v / mx * 100}%;background:var(--ink-3)` })), el("span", { cls: "num", text: pct(v) })))) : el("div", { cls: "empty", text: "No citations." }))),
+        el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", null, "Where ", logo(S.focus), ` ${S.focus} gets named`), el("p", { text: "Domains over-represented in answers that name the brand (×lift)." }))),
+          el("div", { cls: "cb" }, co && co.domains.length ? co.domains.map(([d, c, l]) => el("div", { style: "display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)" }, el("span", { text: d }), el("span", { cls: "note num", text: `${c} answers · ×${l}` }))) : el("div", { cls: "empty", text: "Not enough answers yet." })),
+          L.targets && L.targets.length ? el("div", { cls: "cb", style: "padding-top:0" }, el("h2", { style: "font-size:13px;margin:6px 0", text: "Outreach targets" }), L.targets.map(([d, c]) => el("div", { style: "display:flex;justify-content:space-between;padding:5px 0" }, el("span", { text: d }), el("span", { cls: "note num", text: `${c} answers` })))) : null))];
+    },
+    competitors: () => {
+      const cur = waves().slice(-1)[0];
+      return [filters(), el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", { text: "Tracked brands" }), el("p", { text: "Visibility and named-first rate, latest wave in range." }))),
+        el("div", { cls: "tw", style: "margin-top:10px" }, el("table", null, el("thead", null, el("tr", null, ["Brand", "Domain", "Visibility", "Named first"].map((h, i) => el("th", { cls: i >= 2 ? "r" : null, text: h })))),
+          el("tbody", null, BRANDS.map(n => el("tr", { cls: n === S.focus ? "focus" : null }, el("td", null, el("span", { cls: "bn" }, logo(n), n)), el("td", { cls: "note", text: (DATA.domains || {})[n] || "–" }),
+            el("td", { cls: "r num", text: pct(vis(cur, n)) }), el("td", { cls: "r num", text: pct(vis(cur, n, null, "first")) }))))))),
+        el("div", { cls: "card" }, el("div", { cls: "ch" }, el("div", null, el("h2", { text: "Brands the engines name that you don't track" }), el("p", { text: "Auto-detected. Add real rivals to competitors in config.json and rerun report and dashboard (free)." }))),
+          el("div", { cls: "tw", style: "margin-top:10px" }, (L.discovered || []).length ? el("table", null, el("thead", null, el("tr", null, ["Name", "Likely domain", "In answers", "Prompts"].map((h, i) => el("th", { cls: i >= 2 ? "r" : null, text: h })))),
+            el("tbody", null, L.discovered.map(x => el("tr", null, el("td", { style: "font-weight:500", text: x.name }), el("td", { cls: "note", text: x.domain || "?" }), el("td", { cls: "r num", text: pct(x.share) }), el("td", { cls: "r num", text: String(x.prompts) })))))
+            : el("div", { cls: "empty", text: "None detected." })))];
+    },
+  };
+
+  // ---- shell ----
+  const navA = {};
+  const watch = (L.gaps || []).map(g => g.pid).concat(P.slice().sort((a, b) => (b.impressions || 0) - (a.impressions || 0)).map(p => p.id)).filter((v, i, a) => a.indexOf(v) === i).slice(0, 3);
+  const side = el("aside", { cls: "side" },
+    el("label", { cls: "bsw" }, logo(B, "lgx"), el("span", { style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap", text: B }), ic("chev", "chev"),
+      el("select", { "aria-label": "Focus brand", onchange: ev => { S.focus = ev.target.value; S.compare = null; render(); } }, BRANDS.map(n => el("option", { value: n, text: n })))),
+    el("nav", { cls: "grp nav", "aria-label": "Views" }, el("div", { cls: "h", text: "General" }), NAV.map(([k, t]) => (navA[k] = el("a", { href: "#" + k }, ic(k), el("span", { cls: "t", text: t }))))),
+    el("div", { cls: "grp watch" }, el("div", { cls: "h" }, ic("eye"), "Watch list"), watch.map(id => el("a", { href: "#prompt/" + encodeURIComponent(id), title: (PROMPT[id] || {}).text }, el("span", { cls: "t", text: (PROMPT[id] || { text: id }).text })))),
+    el("div", { cls: "foot" }, el("a", { href: "dashboard.html#actions" }, `Actions & full console (${(DATA.actions || []).filter(a => a.status !== "done").length} open) ↗`),
+      el("span", { text: `${DATA.country.toUpperCase()}/${DATA.language} · logged-out answers via Renderdata` })));
+  const title = el("h1"), body = el("div", { cls: "wrap" });
+  const head = el("div", { cls: "head" }, title, el("div", { cls: "r" },
+    el("a", { cls: "ghost", href: "dashboard.html" }, ic("ext"), "Console"),
+    el("button", { cls: "ghost", "aria-label": "Toggle theme", onclick: () => { const n = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; store.set("pwb:monitor-theme", n); } }, ic("moon"))));
+  app.append(el("div", { cls: "shell" }, side, el("main", null, head, body)));
+
+  function render() {
+    hideTip();
+    const h = decodeURIComponent((location.hash || "#dashboard").slice(1)), [v, arg] = h.split("/");
+    const key = VIEW[v] ? v : "dashboard";
+    document.documentElement.style.setProperty("--accent", col(S.focus));
+    side.querySelector(".bsw select").value = S.focus; side.querySelector(".bsw .lg").replaceWith(logo(S.focus, "lgx")); side.querySelector(".bsw > span:not(.lg)").textContent = S.focus;
+    Object.entries(navA).forEach(([k, a]) => { if (k === key || (key === "prompt" && k === "prompts")) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    const t = (NAV.find(n => n[0] === key) || ["", "Prompt"])[1];
+    title.replaceChildren(t); document.title = `${t} · ${S.focus} · AI visibility`;
+    body.replaceChildren(...VIEW[key](arg));
+  }
+  addEventListener("hashchange", () => { S.shown = 30; render(); scrollTo(0, 0); });
+  render();
+})();
+</script>
+</body>
+</html>

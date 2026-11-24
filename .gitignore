@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+# your tracking projects hold scraped answers and API output
+aeo/
+*.jsonl
+.env

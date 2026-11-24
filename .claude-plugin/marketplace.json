@@ -1,0 +1,14 @@
+{
+  "name": "promptwatch-buster",
+  "owner": { "name": "Manasbh", "url": "https://github.com/Manasbh" },
+  "metadata": { "description": "AI visibility tracking for Claude Code" },
+  "plugins": [
+    {
+      "name": "promptwatch-buster",
+      "source": "./",
+      "description": "Track your brand's visibility in ChatGPT, Gemini and Google AI Overviews, find who gets named instead and why, and get a dashboard plus an action plan.",
+      "version": "1.0.0",
+      "category": "marketing"
+    }
+  ]
+}
