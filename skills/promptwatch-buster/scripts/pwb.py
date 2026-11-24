@@ -176,7 +176,7 @@ class Pacer:
 def need_key():
     key = os.environ.get("RENDERDATA_API_KEY")
     if not key:
-        sys.exit("set RENDERDATA_API_KEY (free key with 10 credits: https://platform.renderdata.cloud/login)")
+        sys.exit("set RENDERDATA_API_KEY. Get a free key (10 credits, no card) at https://platform.renderdata.cloud/keys")
     return key
 
 

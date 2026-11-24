@@ -28,7 +28,7 @@ It installs the plugin through the `claude` CLI, or copies the skill into `~/.cl
 
 **Or just ask Claude Code:** "install the plugin from github.com/Manasbh/promptwatch-buster".
 
-Then get a Renderdata API key. Sign up at [platform.renderdata.cloud](https://platform.renderdata.cloud/login); new accounts get free credits. Set the key in your shell:
+Then get a Renderdata API key at **[platform.renderdata.cloud/keys](https://platform.renderdata.cloud/keys)**. Sign in with your email; you get 10 free credits with no card. Set the key in your shell:
 
 ```bash
 export RENDERDATA_API_KEY=your_key
@@ -68,6 +68,14 @@ Or type `/promptwatch-buster`.
 The **action board** lives in the console. Cards move from To do to In progress to Done, and the status file goes back to Claude:
 
 ![Actions](docs/actions.png)
+
+## Why Renderdata
+
+[Renderdata](https://renderdata.cloud) asks ChatGPT, Gemini and Google your questions in real logged-out sessions. It returns the full answer, its citations, the pages the engine read and the searches it ran, as JSON.
+
+The usual alternative is DataForSEO. It costs more per AI answer and needs a **$50 minimum top-up** before you can make a single call. Renderdata is **$0.001 per answer** on every engine, starts with free credits, and its packs start at $10. Failed calls are free and credits never expire.
+
+**Need higher limits?** Pay-as-you-go allows 2 calls at once and 30 a minute, so a 100-prompt wave takes a few hours. For bigger panels, several brands or frequent waves, upgrade to the **$30/month Renderdata plan** on the [pricing page](https://platform.renderdata.cloud/pricing).
 
 ## Cost
 

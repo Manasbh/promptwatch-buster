@@ -1,6 +1,6 @@
 {
   "name": "promptwatch-buster",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Track how often ChatGPT, Gemini and Google AI Overviews name your brand, who they name instead, and which sources they cite. Builds prompts from your Search Console and Bing exports, reports with honest 95% ranges, and generates a monitoring dashboard plus an action board. Runs on the Renderdata API (about $0.001 per answer).",
   "author": { "name": "Manasbh", "url": "https://github.com/Manasbh" },
   "homepage": "https://github.com/Manasbh/promptwatch-buster",

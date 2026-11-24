@@ -7,7 +7,7 @@
       "name": "promptwatch-buster",
       "source": "./",
       "description": "Track your brand's visibility in ChatGPT, Gemini and Google AI Overviews, find who gets named instead and why, and get a dashboard plus an action plan.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "category": "marketing"
     }
   ]
